@@ -1,3 +1,29 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-surface-base text-ink-secondary antialiased;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-orbitron text-ink-primary;
+  }
+}
+
+@layer utilities {
+  /* Neon border glow helpers */
+  .border-brand-glow {
+    border-color: theme('colors.brand.DEFAULT');
+    box-shadow: 0 0 8px theme('colors.brand.glow'), inset 0 0 8px rgba(124, 58, 237, 0.05);
+  }
+  .border-accent-glow {
+    border-color: theme('colors.accent.DEFAULT');
+    box-shadow: 0 0 8px theme('colors.accent.glow'), inset 0 0 8px rgba(6, 182, 212, 0.05);
+  }
+}

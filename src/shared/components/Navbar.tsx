@@ -5,6 +5,8 @@ import { usePathname } from 'next/navigation'
 import { signOut } from '@/modules/auth/actions'
 import LoginButton from '@/modules/auth/components/LoginButton'
 
+export type NavLink = { href: string; label: string }
+
 export type NavUser = {
   id: string
   email: string | null
@@ -12,35 +14,40 @@ export type NavUser = {
   avatarUrl: string | null
 } | null
 
-const LINKS = [
+export const NAV_LINKS: NavLink[] = [
   { href: '/', label: 'Home' },
   { href: '/my-wallet', label: 'My Wallet' },
   { href: '/class-wallet', label: 'Class Wallet' },
 ]
 
-export default function Navbar({ user }: { user: NavUser }) {
+type NavbarProps = {
+  user: NavUser
+  links?: NavLink[]
+}
+
+export default function Navbar({ user, links = NAV_LINKS }: NavbarProps) {
   const pathname = usePathname()
 
   return (
-    <nav className="sticky top-0 z-50 flex h-14 items-center justify-between border-b border-white/[0.07] bg-[#080B14]/80 px-8 backdrop-blur-[14px]">
+    <nav className="sticky top-0 z-50 flex h-14 items-center justify-between border-b border-white/[0.07] bg-[#0A0E1A]/80 px-6 backdrop-blur-[14px] lg:px-8">
       <Link
         href="/"
-        className="text-[0.82rem] font-extrabold uppercase tracking-[0.13em] text-[#E8E8F0]"
+        className="font-orbitron text-[0.75rem] font-bold uppercase tracking-[0.18em] text-[#E8E8F0]"
       >
-        Muzik<span className="text-indigo-500">skul</span>
+        Muzik<span className="text-cyan-400">skul</span>
       </Link>
 
       <ul className="hidden items-center gap-0.5 sm:flex">
-        {LINKS.map(({ href, label }) => {
+        {links.map(({ href, label }) => {
           const active = href === '/' ? pathname === '/' : pathname.startsWith(href)
           return (
             <li key={href}>
               <Link
                 href={href}
-                className={`rounded-lg px-3 py-1.5 text-[0.83rem] font-medium transition-colors ${
+                className={`rounded-lg px-3 py-1.5 text-[0.83rem] font-medium transition-colors duration-150 ${
                   active
-                    ? 'bg-indigo-500/[0.14] text-[#E8E8F0]'
-                    : 'text-[#6B7280] hover:bg-white/5 hover:text-[#E8E8F0]'
+                    ? 'bg-cyan-500/[0.12] text-cyan-300'
+                    : 'text-[#6B7280] hover:bg-white/[0.05] hover:text-[#E8E8F0]'
                 }`}
               >
                 {label}
@@ -61,10 +68,10 @@ export default function Navbar({ user }: { user: NavUser }) {
                   alt={user.name ?? 'avatar'}
                   width={28}
                   height={28}
-                  className="h-7 w-7 rounded-full object-cover"
+                  className="h-7 w-7 rounded-full object-cover ring-1 ring-cyan-500/30"
                 />
               ) : (
-                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-indigo-600 text-xs font-bold text-white">
+                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-cyan-600 text-xs font-bold text-white">
                   {(user.name ?? user.email ?? 'U')[0].toUpperCase()}
                 </span>
               )}
@@ -75,7 +82,7 @@ export default function Navbar({ user }: { user: NavUser }) {
             <form action={signOut}>
               <button
                 type="submit"
-                className="rounded-lg px-3 py-1.5 text-[0.83rem] text-[#6B7280] transition hover:bg-white/5 hover:text-[#E8E8F0]"
+                className="cursor-pointer rounded-lg px-3 py-1.5 text-[0.83rem] text-[#6B7280] transition-colors duration-150 hover:bg-white/[0.05] hover:text-[#E8E8F0]"
               >
                 Sign out
               </button>

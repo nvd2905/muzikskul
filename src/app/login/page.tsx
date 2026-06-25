@@ -6,11 +6,11 @@ export default function LoginPage({
   searchParams: Promise<{ error?: string }>
 }) {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-gray-950">
-      <div className="w-full max-w-sm rounded-2xl bg-gray-900 p-8 shadow-xl">
+    <main className="flex min-h-screen items-center justify-center bg-surface-base">
+      <div className="w-full max-w-sm rounded-2xl border border-surface-border bg-surface-card p-8 shadow-card">
         <div className="mb-8 text-center">
-          <h1 className="text-2xl font-bold text-white">Muzikskul</h1>
-          <p className="mt-2 text-sm text-gray-400">Sign in to continue</p>
+          <h1 className="font-orbitron text-2xl font-bold text-ink-primary">Muzikskul</h1>
+          <p className="mt-2 text-sm text-ink-secondary">Sign in to continue</p>
         </div>
 
         <OAuthErrorBanner searchParams={searchParams} />
@@ -30,7 +30,7 @@ async function OAuthErrorBanner({
   if (!error) return null
 
   return (
-    <div className="mb-4 rounded-lg bg-red-900/40 px-4 py-3 text-sm text-red-300">
+    <div className="mb-4 rounded-lg bg-neon-red/10 px-4 py-3 text-sm text-neon-red">
       Login failed. Please try again.
     </div>
   )

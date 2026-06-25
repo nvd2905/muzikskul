@@ -7,7 +7,7 @@ export default function LoginButton() {
     <form action={signInWithDiscord}>
       <button
         type="submit"
-        className="flex items-center gap-3 rounded-lg bg-[#5865F2] px-6 py-3 text-sm font-semibold text-white shadow-md transition-all duration-150 hover:bg-[#4752c4] active:scale-95 disabled:opacity-60"
+        className="flex w-full items-center justify-center gap-3 rounded-lg bg-brand px-6 py-3 text-sm font-semibold text-ink-primary shadow-brand-glow transition-all duration-150 hover:bg-brand-dark active:scale-95 disabled:opacity-60"
       >
         <DiscordIcon />
         Login with Discord
