@@ -16,8 +16,9 @@ export type NavUser = {
 
 export const NAV_LINKS: NavLink[] = [
   { href: '/', label: 'Home' },
-  { href: '/my-wallet', label: 'My Wallet' },
   { href: '/class-wallet', label: 'Class Wallet' },
+  { href: '/muzik', label: 'Muzik' },
+  { href: '/my-wallet', label: 'My Wallet' },
 ]
 
 type NavbarProps = {
@@ -29,12 +30,12 @@ export default function Navbar({ user, links = NAV_LINKS }: NavbarProps) {
   const pathname = usePathname()
 
   return (
-    <nav className="sticky top-0 z-50 flex h-14 items-center justify-between border-b border-white/[0.07] bg-[#0A0E1A]/80 px-6 backdrop-blur-[14px] lg:px-8">
+    <nav className="sticky top-0 z-50 flex h-14 items-center justify-between border-b border-surface-border bg-surface-card/80 px-6 backdrop-blur-[14px] lg:px-8">
       <Link
         href="/"
-        className="font-orbitron text-[0.75rem] font-bold uppercase tracking-[0.18em] text-[#E8E8F0]"
+        className="font-orbitron text-[0.75rem] font-bold uppercase tracking-[0.18em] text-ink-primary"
       >
-        Muzik<span className="text-cyan-400">skul</span>
+        Muzik<span className="text-accent">skul</span>
       </Link>
 
       <ul className="hidden items-center gap-0.5 sm:flex">
@@ -46,8 +47,8 @@ export default function Navbar({ user, links = NAV_LINKS }: NavbarProps) {
                 href={href}
                 className={`rounded-lg px-3 py-1.5 text-[0.83rem] font-medium transition-colors duration-150 ${
                   active
-                    ? 'bg-cyan-500/[0.12] text-cyan-300'
-                    : 'text-[#6B7280] hover:bg-white/[0.05] hover:text-[#E8E8F0]'
+                    ? 'bg-accent/10 text-accent-light'
+                    : 'text-ink-muted hover:bg-surface-elevated hover:text-ink-primary'
                 }`}
               >
                 {label}
@@ -68,21 +69,21 @@ export default function Navbar({ user, links = NAV_LINKS }: NavbarProps) {
                   alt={user.name ?? 'avatar'}
                   width={28}
                   height={28}
-                  className="h-7 w-7 rounded-full object-cover ring-1 ring-cyan-500/30"
+                  className="h-7 w-7 rounded-full object-cover ring-1 ring-accent/30"
                 />
               ) : (
-                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-cyan-600 text-xs font-bold text-white">
+                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-brand text-xs font-bold text-ink-primary">
                   {(user.name ?? user.email ?? 'U')[0].toUpperCase()}
                 </span>
               )}
-              <span className="hidden text-sm font-medium text-[#E8E8F0]/80 sm:block">
+              <span className="hidden text-sm font-medium text-ink-secondary sm:block">
                 {user.name ?? user.email}
               </span>
             </div>
             <form action={signOut}>
               <button
                 type="submit"
-                className="cursor-pointer rounded-lg px-3 py-1.5 text-[0.83rem] text-[#6B7280] transition-colors duration-150 hover:bg-white/[0.05] hover:text-[#E8E8F0]"
+                className="cursor-pointer rounded-lg px-3 py-1.5 text-[0.83rem] text-ink-muted transition-colors duration-150 hover:bg-surface-elevated hover:text-ink-primary"
               >
                 Sign out
               </button>

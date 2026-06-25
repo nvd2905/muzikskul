@@ -3,9 +3,11 @@ import {
   getClassFundStatus,
   getClassTransactions,
   updateTransactionStatus,
+  adjustFundBalance,
 } from '@/modules/class-wallet/services'
 import FundTable from '@/modules/class-wallet/components/FundTable'
-import { getCurrentUser, signOut } from '@/modules/auth/actions'
+import { getCurrentUser } from '@/modules/auth/actions'
+import Navbar from '@/shared/components/Navbar'
 
 const FUND_ID = 'fund-001'
 
@@ -22,25 +24,20 @@ export default async function ClassWalletPage() {
     revalidatePath('/class-wallet')
   }
 
+  async function handleAdjustBalance(delta: number, name: string, reason: string) {
+    'use server'
+    await adjustFundBalance(FUND_ID, delta, name, reason)
+    revalidatePath('/class-wallet')
+  }
+
   return (
-    <main className="min-h-screen bg-gray-50">
-      <header className="flex items-center justify-between border-b border-gray-200 bg-white px-6 py-3">
-        <span className="text-sm font-medium text-gray-700">
-          {user?.name ?? user?.email ?? 'User'}
-        </span>
-        <form action={signOut}>
-          <button
-            type="submit"
-            className="rounded-md px-3 py-1.5 text-sm text-gray-500 transition hover:bg-gray-100 hover:text-gray-900"
-          >
-            Sign out
-          </button>
-        </form>
-      </header>
+    <main className="min-h-screen bg-surface-base">
+      <Navbar user={user} />
       <FundTable
         fundStatus={fundStatus}
         transactions={transactions}
         onApprove={handleApprove}
+        onAdjustBalance={handleAdjustBalance}
       />
     </main>
   )
