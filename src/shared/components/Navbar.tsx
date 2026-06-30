@@ -17,6 +17,7 @@ export type NavUser = {
 export const NAV_LINKS: NavLink[] = [
   { href: '/', label: 'Home' },
   { href: '/class-wallet', label: 'Class Wallet' },
+  { href: '/gold-price', label: 'Giá vàng' },
   { href: '/muzik', label: 'Muzik' },
   { href: '/my-wallet', label: 'My Wallet' },
 ]
