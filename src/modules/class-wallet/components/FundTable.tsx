@@ -96,7 +96,7 @@ function AdjustBalanceForm({ onAdjust }: { onAdjust: (delta: number, name: strin
   )
 }
 
-function BudgetSummaryCard({ fundStatus, onAdjust }: { fundStatus: FundStatus; onAdjust: (delta: number) => Promise<void> }) {
+function BudgetSummaryCard({ fundStatus, onAdjust }: { fundStatus: FundStatus; onAdjust: (delta: number, name: string, reason: string) => Promise<void> }) {
   const { balance, className, targetBudget } = fundStatus
   const pct = Math.min((balance / targetBudget) * 100, 100)
   const isLow = pct < 50
