@@ -90,9 +90,12 @@ Both the Supabase dashboard (Authentication → URL Configuration) and the Disco
 ```
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
+WALLET_ENCRYPTION_KEY=
 ```
 
 Discord Client ID and Secret are stored in the Supabase dashboard (Authentication → Providers → Discord), not in `.env`.
+
+`WALLET_ENCRYPTION_KEY` is a server-only secret (never `NEXT_PUBLIC_`) used by `src/modules/wallet/crypto.ts` to AES-256-GCM encrypt/decrypt `amount`, `category`, and `description` on `personal_transactions` before they hit the database — so a project member with raw table/dashboard access sees ciphertext, not plaintext financial data. Losing this key makes existing encrypted rows permanently unreadable; back it up outside the repo the same way you would a database password.
 
 ### Roles (`profiles` table)
 

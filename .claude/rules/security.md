@@ -14,11 +14,19 @@
 |---|---|---|
 | `NEXT_PUBLIC_SUPABASE_URL` | `NEXT_PUBLIC_` | Yes — intentional, safe |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | `NEXT_PUBLIC_` | Yes — intentional, safe (anon key only) |
+| `WALLET_ENCRYPTION_KEY` | none | Never — server-only, decrypts `personal_transactions` columns |
 | Any service role key | none | Never — server-only, never `NEXT_PUBLIC_` |
 
 - The **anon key** is safe to expose — Supabase RLS controls what it can access.
 - The **service role key** bypasses RLS entirely — never put it in client code or `NEXT_PUBLIC_` vars.
 - Never commit `.env.local` or any file containing real keys.
+
+## Application-layer encryption
+
+- RLS only protects access through the Supabase API (PostgREST/client SDK) — anyone with direct DB/dashboard access bypasses it entirely. For columns that must stay unreadable even to project members with raw table access, encrypt at the application layer before the value reaches Supabase.
+- Pattern: `src/modules/wallet/crypto.ts` derives an AES-256-GCM key from `WALLET_ENCRYPTION_KEY` (never the DB) and exposes `encryptField`/`decryptField`. `services.ts` calls these at the read/write boundary so the rest of the module works with plaintext values — encryption never leaks into components or Server Actions.
+- Only import a module's `crypto.ts` from that module's own `services.ts` — it uses Node's `crypto`, which breaks the client bundle if imported by a `'use client'` component (see [architecture.md](architecture.md) client/server boundary).
+- Losing the encryption key permanently loses the encrypted data — treat it like a database credential, not a rotatable app secret.
 
 ## Row Level Security (RLS)
 
