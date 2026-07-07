@@ -30,6 +30,8 @@ export async function signOut() {
   redirect('/login')
 }
 
+export type UserRole = 'admin' | 'member'
+
 export async function getCurrentUser() {
   const supabase = await createClient()
   const {
@@ -39,10 +41,25 @@ export async function getCurrentUser() {
 
   if (error || !user) return null
 
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+
   return {
     id: user.id,
     email: user.email ?? null,
     name: (user.user_metadata?.full_name ?? user.user_metadata?.name ?? null) as string | null,
     avatarUrl: (user.user_metadata?.avatar_url ?? null) as string | null,
+    role: (profile?.role ?? 'member') as UserRole,
   }
+}
+
+export async function requireAdmin() {
+  const user = await getCurrentUser()
+  if (!user || user.role !== 'admin') {
+    throw new Error('Unauthorized: admin access required')
+  }
+  return user
 }

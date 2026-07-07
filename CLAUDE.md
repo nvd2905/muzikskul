@@ -64,8 +64,10 @@ Server Actions for data mutations are defined inline in `page.tsx`. The exceptio
 
 Runs on every non-static request. Responsibilities:
 1. Refreshes the Supabase session cookie (must happen on every request via `createServerClient` + `setAll`).
-2. Redirects unauthenticated users hitting `/class-wallet` or `/my-wallet` to `/login`.
+2. Redirects unauthenticated users hitting `/class-wallet`, `/my-wallet`, or `/muzik` to `/login`.
 3. Redirects authenticated users hitting `/login` to `/class-wallet`.
+
+Protected path prefixes live in `PROTECTED_PREFIXES` in `src/middleware.ts` — add new ones there.
 
 The matcher excludes `/auth/callback` so the OAuth code-exchange route can set the session cookie before any redirect logic fires.
 
@@ -92,8 +94,17 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=
 
 Discord Client ID and Secret are stored in the Supabase dashboard (Authentication → Providers → Discord), not in `.env`.
 
+### Roles (`profiles` table)
+
+`profiles` mirrors `auth.users` (one row per user, `id` is the FK) and adds a `role` column (`'admin' | 'member'`, default `'member'`) plus `email`/`username`. A `handle_new_user` trigger on `auth.users` keeps it populated on signup; see `supabase/migrations/003_add_profiles_role.sql` and `004_add_email_username_to_profiles.sql`.
+
+`getCurrentUser()` in `src/modules/auth/actions.ts` joins `profiles.role` onto the returned user object. `requireAdmin()` (same file) throws if the caller isn't an admin — call it at the top of any Server Action that mutates admin-only data (see `handleApprove`/`handleAdjustBalance` in `src/app/class-wallet/page.tsx`), and gate the corresponding UI with `isAdmin` props rather than relying on the throw alone.
+
+RLS is enabled on `class_funds` and `class_transactions` (`supabase/migrations/005_enable_rls_class_wallet.sql`): any authenticated user can read fund status/transactions and insert a `pending` transaction (self-reported payment); only admins (checked via `profiles.role`) can update fund balance, approve transactions, or insert a pre-`approved` transaction.
+
 ## Current modules
 
-- **`class-wallet`** — class fund management: balance tracking, VietQR payment collection, transaction approval by treasurers.
-- **`auth`** — Discord OAuth2 login/logout via Supabase. `actions.ts` exports `signInWithDiscord`, `signOut`, and `getCurrentUser`. `LoginButton.tsx` is the only client component.
-- **`muzik`**, **`wallet`** — directory scaffolding only, no code yet.
+- **`class-wallet`** — class fund management: balance tracking, Momo QR payment collection with member self-reported payments (`reportPayment`), admin-approved transactions that auto-adjust the fund balance (`approveTransaction`), and manual balance adjustment restricted to admins (see Roles above).
+- **`auth`** — Discord OAuth2 login/logout via Supabase. `actions.ts` exports `signInWithDiscord`, `signOut`, `getCurrentUser`, and `requireAdmin`. `LoginButton.tsx` is the only client component.
+- **`gold-price`** — domestic gold price dashboard (`GoldPriceDashboard`, `GoldSavingsTracker`) with a 24h SJC price history; viewable without auth, with an inline sign-in CTA.
+- **`muzik`**, **`wallet`** — route/module scaffolding only (`/muzik` renders a "Coming soon" placeholder); no real features yet.
