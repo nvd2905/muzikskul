@@ -22,13 +22,19 @@ Multi-module platform built with Next.js (App Router) and Supabase, currently in
    ```bash
    npm install
    ```
-2. Create `.env.local` in the project root:
+2. Create `.env.local` in the project root (already gitignored — never commit it):
    ```
    NEXT_PUBLIC_SUPABASE_URL=
    NEXT_PUBLIC_SUPABASE_ANON_KEY=
+   WALLET_ENCRYPTION_KEY=
    ```
    Discord Client ID/Secret are configured in the Supabase dashboard, not here.
-3. Run the SQL files in `supabase/migrations/` against your Supabase project, in order.
+
+   | Variable | Where it comes from | Notes |
+   |---|---|---|
+   | `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase dashboard → Project Settings → API | Safe to expose to the browser; RLS controls access. |
+   | `WALLET_ENCRYPTION_KEY` | Generate once: `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"` | Server-only, never `NEXT_PUBLIC_`. Encrypts/decrypts `amount`, `category`, `description` on `personal_transactions` (`src/modules/wallet/crypto.ts`) so a project member with raw table/dashboard access sees ciphertext, not real financial data. **Share it out-of-band (password manager), never via git or chat.** Losing it permanently loses every encrypted row — back it up like a database credential. Every teammate's local `.env.local` needs the same value to read wallet data seeded by others. |
+3. Run the SQL files in `supabase/migrations/` against your Supabase project, in order. If `personal_transactions` (from `006_create_personal_transactions.sql`) already exists in your project from before wallet encryption was added, `007_encrypt_personal_transactions.sql` truncates it and alters it to the encrypted-column shape — confirm there's no real data in that table before running it.
 4. In both the Supabase dashboard (Authentication → URL Configuration) and the Discord Developer Portal (OAuth2 → Redirects), allowlist:
    ```
    http://localhost:3000/auth/callback
@@ -73,7 +79,8 @@ Modules do not import from each other — see `.claude/rules/architecture.md` fo
 | `class-wallet` | Balance tracking, Momo QR collection with member self-reported payments, admin-approved transactions |
 | `auth` | Discord OAuth2 login/logout, role lookup (`admin` / `member`) |
 | `gold-price` | Domestic gold price dashboard + 24h history, viewable without auth |
-| `muzik`, `wallet` | Scaffolding only |
+| `wallet` | Personal income/expense tracker (`/my-wallet`) — quick-add form, running balance, encrypted `amount`/`category`/`description` (see `WALLET_ENCRYPTION_KEY` above) |
+| `muzik` | Scaffolding only |
 
 ## Further reading
 
