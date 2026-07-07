@@ -81,14 +81,52 @@ export async function adjustFundBalance(
   if (error) throw error
 }
 
-export async function updateTransactionStatus(
-  transactionId: string,
-  status: 'pending' | 'approved',
+export async function reportPayment(
+  fundId: string,
+  amount: number,
+  payerName: string,
+  note: string,
 ): Promise<void> {
   const supabase = await createClient()
   const { error } = await supabase
     .from('class_transactions')
-    .update({ status })
-    .eq('id', transactionId)
+    .insert({
+      fund_id: fundId,
+      amount,
+      payer_name: payerName,
+      note,
+      status: 'pending',
+    })
   if (error) throw error
+}
+
+export async function approveTransaction(fundId: string, transactionId: string): Promise<void> {
+  const supabase = await createClient()
+
+  const { data: transaction, error: fetchError } = await supabase
+    .from('class_transactions')
+    .select('amount, status')
+    .eq('id', transactionId)
+    .single()
+  if (fetchError) throw fetchError
+  if (transaction.status === 'approved') return
+
+  const { error: updateError } = await supabase
+    .from('class_transactions')
+    .update({ status: 'approved' })
+    .eq('id', transactionId)
+  if (updateError) throw updateError
+
+  const { data: fund, error: fundFetchError } = await supabase
+    .from('class_funds')
+    .select('balance')
+    .eq('id', fundId)
+    .single()
+  if (fundFetchError) throw fundFetchError
+
+  const { error: balanceError } = await supabase
+    .from('class_funds')
+    .update({ balance: fund.balance + transaction.amount })
+    .eq('id', fundId)
+  if (balanceError) throw balanceError
 }

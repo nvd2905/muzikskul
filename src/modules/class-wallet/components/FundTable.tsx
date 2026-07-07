@@ -3,22 +3,27 @@
 import { useState, useTransition } from 'react'
 import type { FundStatus, Transaction } from '../services'
 
+type ActionResult = { error?: string }
+
 interface FundTableProps {
   fundStatus: FundStatus
   transactions: Transaction[]
-  onApprove: (transactionId: string) => Promise<void>
-  onAdjustBalance: (delta: number, name: string, reason: string) => Promise<void>
+  isAdmin: boolean
+  onApprove: (transactionId: string) => Promise<ActionResult>
+  onAdjustBalance: (delta: number, name: string, reason: string) => Promise<ActionResult>
+  onReportPayment: (amount: number, payerName: string) => Promise<ActionResult>
 }
 
 function formatVND(amount: number) {
   return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount)
 }
 
-function AdjustBalanceForm({ onAdjust }: { onAdjust: (delta: number, name: string, reason: string) => Promise<void> }) {
+function AdjustBalanceForm({ onAdjust }: { onAdjust: (delta: number, name: string, reason: string) => Promise<ActionResult> }) {
   const [type, setType] = useState<'add' | 'deduct'>('add')
   const [amount, setAmount] = useState('')
   const [name, setName] = useState('')
   const [reason, setReason] = useState('')
+  const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 
   function handleSubmit(e: React.SyntheticEvent) {
@@ -27,7 +32,12 @@ function AdjustBalanceForm({ onAdjust }: { onAdjust: (delta: number, name: strin
     if (!value || value <= 0 || !name.trim() || !reason.trim()) return
     const delta = type === 'add' ? value : -value
     startTransition(async () => {
-      await onAdjust(delta, name.trim(), reason.trim())
+      const result = await onAdjust(delta, name.trim(), reason.trim())
+      if (result.error) {
+        setError(result.error)
+        return
+      }
+      setError(null)
       setAmount('')
       setName('')
       setReason('')
@@ -92,11 +102,20 @@ function AdjustBalanceForm({ onAdjust }: { onAdjust: (delta: number, name: strin
           {isPending ? '...' : 'Lưu'}
         </button>
       </div>
+      {error && <p className="text-xs font-medium text-neon-red">{error}</p>}
     </form>
   )
 }
 
-function BudgetSummaryCard({ fundStatus, onAdjust }: { fundStatus: FundStatus; onAdjust: (delta: number, name: string, reason: string) => Promise<void> }) {
+function BudgetSummaryCard({
+  fundStatus,
+  isAdmin,
+  onAdjust,
+}: {
+  fundStatus: FundStatus
+  isAdmin: boolean
+  onAdjust: (delta: number, name: string, reason: string) => Promise<ActionResult>
+}) {
   const { balance, className, targetBudget } = fundStatus
   const pct = Math.min((balance / targetBudget) * 100, 100)
   const isLow = pct < 50
@@ -143,15 +162,88 @@ function BudgetSummaryCard({ fundStatus, onAdjust }: { fundStatus: FundStatus; o
         />
       </div>
       <p className="mt-1.5 text-right font-jetbrains text-xs text-ink-muted">{pct.toFixed(1)}%</p>
-      <AdjustBalanceForm onAdjust={onAdjust} />
+      {isAdmin && <AdjustBalanceForm onAdjust={onAdjust} />}
     </div>
   )
 }
 
-function VietQRCard({ amount, className }: { amount: number; className: string }) {
+function ReportPaymentForm({
+  suggestedAmount,
+  onReport,
+}: {
+  suggestedAmount: number
+  onReport: (amount: number, payerName: string) => Promise<ActionResult>
+}) {
+  const [amount, setAmount] = useState(String(suggestedAmount))
+  const [name, setName] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState(false)
+  const [isPending, startTransition] = useTransition()
+
+  function handleSubmit(e: React.SyntheticEvent) {
+    e.preventDefault()
+    const value = parseInt(amount, 10)
+    if (!value || value <= 0 || !name.trim()) return
+    startTransition(async () => {
+      const result = await onReport(value, name.trim())
+      if (result.error) {
+        setError(result.error)
+        setSuccess(false)
+        return
+      }
+      setError(null)
+      setSuccess(true)
+      setName('')
+    })
+  }
+
+  const inputClass = 'rounded-lg border border-surface-border bg-surface-elevated px-3 py-1.5 text-xs text-ink-primary placeholder:text-ink-muted focus:border-brand focus:outline-none'
+
+  return (
+    <form onSubmit={handleSubmit} className="mt-4 space-y-2 border-t border-surface-border pt-4">
+      <p className="text-xs font-medium text-ink-muted">Đã chuyển khoản? Báo cho lớp biết</p>
+      <div className="flex gap-2">
+        <input
+          type="number"
+          min="1"
+          value={amount}
+          onChange={e => setAmount(e.target.value)}
+          placeholder="Số tiền (VNĐ)"
+          className={`flex-1 font-jetbrains ${inputClass}`}
+        />
+        <input
+          type="text"
+          value={name}
+          onChange={e => setName(e.target.value)}
+          placeholder="Tên của bạn"
+          className={`flex-1 ${inputClass}`}
+        />
+        <button
+          type="submit"
+          disabled={!amount || !name.trim() || isPending}
+          className="rounded-lg bg-brand px-3 py-1.5 text-xs font-semibold text-ink-primary transition hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {isPending ? '...' : 'Tôi đã chuyển'}
+        </button>
+      </div>
+      {error && <p className="text-xs font-medium text-neon-red">{error}</p>}
+      {success && <p className="text-xs font-medium text-neon-green">Đã ghi nhận, chờ admin xác nhận.</p>}
+    </form>
+  )
+}
+
+function MomoCard({
+  amount,
+  className,
+  onReportPayment,
+}: {
+  amount: number
+  className: string
+  onReportPayment: (amount: number, payerName: string) => Promise<ActionResult>
+}) {
   const [copied, setCopied] = useState(false)
-  const accountNumber = '1234567890'
-  const bankName = 'MB Bank'
+  const accountNumber = '0886662905'
+  const bankName = 'Momo'
 
   function handleCopy() {
     navigator.clipboard.writeText(accountNumber)
@@ -161,25 +253,21 @@ function VietQRCard({ amount, className }: { amount: number; className: string }
 
   return (
     <div className="rounded-xl border border-surface-border bg-surface-card p-6 shadow-card">
-      <h3 className="mb-4 text-base font-semibold text-ink-primary">Thu tiền qua VietQR</h3>
+      <h3 className="mb-4 text-base font-semibold text-ink-primary">Thu tiền qua Momo</h3>
 
       <div className="flex flex-col items-start gap-6 sm:flex-row">
         <div className="flex-shrink-0">
-          <div className="flex h-36 w-36 items-center justify-center rounded-xl border-2 border-dashed border-surface-border bg-surface-elevated">
-            <div className="grid grid-cols-7 gap-0.5">
-              {Array.from({ length: 49 }).map((_, i) => (
-                <div
-                  key={i}
-                  className={`h-3.5 w-3.5 rounded-sm ${
-                    [0,1,2,3,4,5,6,7,14,21,28,35,42,43,44,45,46,47,48,8,13,15,20,36,41,24,25,10,12,38,40].includes(i)
-                      ? 'bg-accent'
-                      : 'bg-surface-elevated'
-                  }`}
-                />
-              ))}
-            </div>
+          <div className="flex h-36 w-36 items-center justify-center overflow-hidden rounded-xl border border-surface-border bg-surface-elevated">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/momo-qr.png"
+              alt="Mã QR Momo"
+              width={144}
+              height={144}
+              className="h-full w-full object-contain"
+            />
           </div>
-          <p className="mt-1.5 text-center text-[10px] text-ink-muted">Mock QR</p>
+          <p className="mt-1.5 text-center text-[10px] text-ink-muted">QR</p>
         </div>
 
         <div className="flex flex-col gap-3 text-sm">
@@ -209,6 +297,7 @@ function VietQRCard({ amount, className }: { amount: number; className: string }
           </div>
         </div>
       </div>
+      <ReportPaymentForm suggestedAmount={amount} onReport={onReportPayment} />
     </div>
   )
 }
@@ -231,14 +320,24 @@ function StatusBadge({ status }: { status: Transaction['status'] }) {
   )
 }
 
-export default function FundTable({ fundStatus, transactions, onApprove, onAdjustBalance }: FundTableProps) {
+export default function FundTable({
+  fundStatus,
+  transactions,
+  isAdmin,
+  onApprove,
+  onAdjustBalance,
+  onReportPayment,
+}: FundTableProps) {
   const [isPending, startTransition] = useTransition()
   const [approvingId, setApprovingId] = useState<string | null>(null)
+  const [approveError, setApproveError] = useState<string | null>(null)
 
   function handleApprove(id: string) {
     setApprovingId(id)
+    setApproveError(null)
     startTransition(async () => {
-      await onApprove(id)
+      const result = await onApprove(id)
+      if (result.error) setApproveError(result.error)
       setApprovingId(null)
     })
   }
@@ -254,13 +353,14 @@ export default function FundTable({ fundStatus, transactions, onApprove, onAdjus
           <p className="mt-1 text-sm text-ink-secondary">Theo dõi thu chi và duyệt thanh toán</p>
         </div>
 
-        <BudgetSummaryCard fundStatus={fundStatus} onAdjust={onAdjustBalance} />
+        <BudgetSummaryCard fundStatus={fundStatus} isAdmin={isAdmin} onAdjust={onAdjustBalance} />
 
-        <VietQRCard amount={suggestedAmount} className={fundStatus.className} />
+        <MomoCard amount={suggestedAmount} className={fundStatus.className} onReportPayment={onReportPayment} />
 
         <div className="rounded-xl border border-surface-border bg-surface-card shadow-card">
           <div className="border-b border-surface-border px-6 py-4">
             <h3 className="text-base font-semibold text-ink-primary">Giao dịch gần đây</h3>
+            {approveError && <p className="mt-1 text-xs font-medium text-neon-red">{approveError}</p>}
           </div>
 
           <div className="overflow-x-auto">
@@ -286,7 +386,7 @@ export default function FundTable({ fundStatus, transactions, onApprove, onAdjus
                       <StatusBadge status={tx.status} />
                     </td>
                     <td className="px-6 py-4">
-                      {tx.status === 'pending' && (
+                      {tx.status === 'pending' && isAdmin && (
                         <button
                           onClick={() => handleApprove(tx.id)}
                           disabled={isPending && approvingId === tx.id}
