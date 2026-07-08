@@ -10,9 +10,16 @@ export type Transaction = {
   id: string
   amount: number
   payerName: string
-  status: 'pending' | 'approved'
+  status: 'pending' | 'approved' | 'rejected'
   invoice_url: string | null
   note: string | null
+  createdAt: string
+  userId: string | null
+}
+
+export type TopDonor = {
+  payerName: string
+  total: number
 }
 
 export async function getClassFundStatus(fundId: string): Promise<FundStatus> {
@@ -34,7 +41,7 @@ export async function getClassTransactions(fundId: string): Promise<Transaction[
   const supabase = await createClient()
   const { data, error } = await supabase
     .from('class_transactions')
-    .select('id, amount, payer_name, status, invoice_url, note')
+    .select('id, amount, payer_name, status, invoice_url, note, created_at, user_id')
     .eq('fund_id', fundId)
     .order('created_at', { ascending: false })
   if (error) throw error
@@ -45,7 +52,48 @@ export async function getClassTransactions(fundId: string): Promise<Transaction[
     status: row.status as Transaction['status'],
     invoice_url: row.invoice_url,
     note: row.note ?? null,
+    createdAt: row.created_at,
+    userId: row.user_id,
   }))
+}
+
+export async function getTopDonors(fundId: string, limit = 3): Promise<TopDonor[]> {
+  const supabase = await createClient()
+
+  const [{ data: rows, error: txError }, { data: profiles, error: profilesError }] = await Promise.all([
+    supabase
+      .from('class_transactions')
+      .select('payer_name, amount, user_id')
+      .eq('fund_id', fundId)
+      .eq('status', 'approved')
+      .gt('amount', 0),
+    supabase.rpc('get_all_usernames'),
+  ])
+  if (txError) throw txError
+  if (profilesError) throw profilesError
+
+  const usernameById = new Map<string, string | null>(
+    ((profiles ?? []) as { id: string; username: string | null }[]).map(p => [p.id, p.username]),
+  )
+
+  // Group by user_id when present so the same person's payments merge into one
+  // total regardless of how they typed their name across submissions; rows with
+  // no linked profile (e.g. admin-entered adjustments) fall back to payer_name.
+  const totals = new Map<string, { payerName: string; total: number }>()
+  for (const row of rows ?? []) {
+    const key = row.user_id ?? `name:${row.payer_name}`
+    const displayName = (row.user_id && usernameById.get(row.user_id)) || row.payer_name
+    const existing = totals.get(key)
+    if (existing) {
+      existing.total += row.amount
+    } else {
+      totals.set(key, { payerName: displayName, total: row.amount })
+    }
+  }
+
+  return [...totals.values()]
+    .sort((a, b) => b.total - a.total)
+    .slice(0, limit)
 }
 
 export async function adjustFundBalance(
@@ -86,6 +134,7 @@ export async function reportPayment(
   amount: number,
   payerName: string,
   note: string,
+  userId: string | null,
 ): Promise<void> {
   const supabase = await createClient()
   const { error } = await supabase
@@ -96,7 +145,26 @@ export async function reportPayment(
       payer_name: payerName,
       note,
       status: 'pending',
+      user_id: userId,
     })
+  if (error) throw error
+}
+
+export async function rejectTransaction(transactionId: string): Promise<void> {
+  const supabase = await createClient()
+
+  const { data: transaction, error: fetchError } = await supabase
+    .from('class_transactions')
+    .select('status')
+    .eq('id', transactionId)
+    .single()
+  if (fetchError) throw fetchError
+  if (transaction.status !== 'pending') return
+
+  const { error } = await supabase
+    .from('class_transactions')
+    .update({ status: 'rejected' })
+    .eq('id', transactionId)
   if (error) throw error
 }
 

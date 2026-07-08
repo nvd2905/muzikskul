@@ -1,21 +1,46 @@
 'use client'
 
-import { useState, useTransition } from 'react'
-import type { FundStatus, Transaction } from '../services'
+import { useMemo, useState, useTransition } from 'react'
+import type { FundStatus, Transaction, TopDonor } from '../services'
 
 type ActionResult = { error?: string }
+type StatusFilter = 'all' | Transaction['status']
+
+const PAGE_SIZE = 10
 
 interface FundTableProps {
   fundStatus: FundStatus
   transactions: Transaction[]
+  topDonors: TopDonor[]
+  defaultPayerName: string
   isAdmin: boolean
   onApprove: (transactionId: string) => Promise<ActionResult>
+  onReject: (transactionId: string) => Promise<ActionResult>
   onAdjustBalance: (delta: number, name: string, reason: string) => Promise<ActionResult>
-  onReportPayment: (amount: number, payerName: string) => Promise<ActionResult>
+  onReportPayment: (amount: number, payerName: string, reason: string) => Promise<ActionResult>
 }
 
 function formatVND(amount: number) {
   return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount)
+}
+
+function formatDateTime(iso: string) {
+  return new Intl.DateTimeFormat('vi-VN', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(iso))
+}
+
+function formatWithCommas(digits: string) {
+  if (!digits) return ''
+  return Number(digits).toLocaleString('en-US')
+}
+
+function digitsOnly(value: string) {
+  return value.replace(/\D/g, '')
 }
 
 function AdjustBalanceForm({ onAdjust }: { onAdjust: (delta: number, name: string, reason: string) => Promise<ActionResult> }) {
@@ -71,10 +96,10 @@ function AdjustBalanceForm({ onAdjust }: { onAdjust: (delta: number, name: strin
           </button>
         </div>
         <input
-          type="number"
-          min="1"
-          value={amount}
-          onChange={e => setAmount(e.target.value)}
+          type="text"
+          inputMode="numeric"
+          value={formatWithCommas(amount)}
+          onChange={e => setAmount(digitsOnly(e.target.value))}
           placeholder="Số tiền (VNĐ)"
           className={`flex-1 font-jetbrains ${inputClass}`}
         />
@@ -169,13 +194,16 @@ function BudgetSummaryCard({
 
 function ReportPaymentForm({
   suggestedAmount,
+  defaultPayerName,
   onReport,
 }: {
   suggestedAmount: number
-  onReport: (amount: number, payerName: string) => Promise<ActionResult>
+  defaultPayerName: string
+  onReport: (amount: number, payerName: string, reason: string) => Promise<ActionResult>
 }) {
   const [amount, setAmount] = useState(String(suggestedAmount))
-  const [name, setName] = useState('')
+  const [name, setName] = useState(defaultPayerName)
+  const [reason, setReason] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
   const [isPending, startTransition] = useTransition()
@@ -185,7 +213,7 @@ function ReportPaymentForm({
     const value = parseInt(amount, 10)
     if (!value || value <= 0 || !name.trim()) return
     startTransition(async () => {
-      const result = await onReport(value, name.trim())
+      const result = await onReport(value, name.trim(), reason.trim())
       if (result.error) {
         setError(result.error)
         setSuccess(false)
@@ -194,6 +222,7 @@ function ReportPaymentForm({
       setError(null)
       setSuccess(true)
       setName('')
+      setReason('')
     })
   }
 
@@ -204,10 +233,10 @@ function ReportPaymentForm({
       <p className="text-xs font-medium text-ink-muted">Đã chuyển khoản? Báo cho lớp biết</p>
       <div className="flex gap-2">
         <input
-          type="number"
-          min="1"
-          value={amount}
-          onChange={e => setAmount(e.target.value)}
+          type="text"
+          inputMode="numeric"
+          value={formatWithCommas(amount)}
+          onChange={e => setAmount(digitsOnly(e.target.value))}
           placeholder="Số tiền (VNĐ)"
           className={`flex-1 font-jetbrains ${inputClass}`}
         />
@@ -216,6 +245,15 @@ function ReportPaymentForm({
           value={name}
           onChange={e => setName(e.target.value)}
           placeholder="Tên của bạn"
+          className={`flex-1 ${inputClass}`}
+        />
+      </div>
+      <div className="flex gap-2">
+        <input
+          type="text"
+          value={reason}
+          onChange={e => setReason(e.target.value)}
+          placeholder="Lý do (không bắt buộc)"
           className={`flex-1 ${inputClass}`}
         />
         <button
@@ -235,11 +273,13 @@ function ReportPaymentForm({
 function MomoCard({
   amount,
   className,
+  defaultPayerName,
   onReportPayment,
 }: {
   amount: number
   className: string
-  onReportPayment: (amount: number, payerName: string) => Promise<ActionResult>
+  defaultPayerName: string
+  onReportPayment: (amount: number, payerName: string, reason: string) => Promise<ActionResult>
 }) {
   const [copied, setCopied] = useState(false)
   const accountNumber = '0886662905'
@@ -257,13 +297,13 @@ function MomoCard({
 
       <div className="flex flex-col items-start gap-6 sm:flex-row">
         <div className="flex-shrink-0">
-          <div className="flex h-36 w-36 items-center justify-center overflow-hidden rounded-xl border border-surface-border bg-surface-elevated">
+          <div className="flex h-64 w-64 items-center justify-center overflow-hidden rounded-xl border border-surface-border bg-surface-elevated">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="/momo-qr.jpg"
               alt="Mã QR Momo"
-              width={144}
-              height={144}
+              width={256}
+              height={256}
               className="h-full w-full object-contain"
             />
           </div>
@@ -297,7 +337,35 @@ function MomoCard({
           </div>
         </div>
       </div>
-      <ReportPaymentForm suggestedAmount={amount} onReport={onReportPayment} />
+      <ReportPaymentForm suggestedAmount={amount} defaultPayerName={defaultPayerName} onReport={onReportPayment} />
+    </div>
+  )
+}
+
+const DONOR_RANK_COLORS = ['text-neon-yellow', 'text-ink-secondary', 'text-brand-light']
+
+function TopDonorsCard({ donors }: { donors: TopDonor[] }) {
+  if (donors.length === 0) return null
+
+  return (
+    <div className="rounded-xl border border-surface-border bg-surface-card p-6 shadow-card">
+      <h3 className="mb-4 text-base font-semibold text-ink-primary">Top 3 người ủng hộ</h3>
+      <ol className="space-y-2.5">
+        {donors.map((donor, index) => (
+          <li
+            key={donor.payerName}
+            className="flex items-center justify-between rounded-lg border border-surface-border bg-surface-elevated px-4 py-2.5"
+          >
+            <div className="flex items-center gap-3">
+              <span className={`font-orbitron text-lg font-bold ${DONOR_RANK_COLORS[index] ?? 'text-ink-muted'}`}>
+                #{index + 1}
+              </span>
+              <span className="font-medium text-ink-primary">{donor.payerName}</span>
+            </div>
+            <span className="font-jetbrains font-semibold text-accent">{formatVND(donor.total)}</span>
+          </li>
+        ))}
+      </ol>
     </div>
   )
 }
@@ -305,46 +373,103 @@ function MomoCard({
 function StatusBadge({ status }: { status: Transaction['status'] }) {
   if (status === 'approved') {
     return (
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-neon-green/10 px-2.5 py-1 text-xs font-semibold text-neon-green">
-        <span className="h-1.5 w-1.5 rounded-full bg-neon-green" />
+      <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full bg-neon-green/10 px-2.5 py-1 text-xs font-semibold text-neon-green">
+        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-neon-green" />
         Đã duyệt
       </span>
     )
   }
+  if (status === 'rejected') {
+    return (
+      <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full bg-neon-red/10 px-2.5 py-1 text-xs font-semibold text-neon-red">
+        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-neon-red" />
+        Từ chối
+      </span>
+    )
+  }
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-full bg-neon-yellow/10 px-2.5 py-1 text-xs font-semibold text-neon-yellow">
+    <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full bg-neon-yellow/10 px-2.5 py-1 text-xs font-semibold text-neon-yellow">
       <span className="animate-ping absolute h-1.5 w-1.5 rounded-full bg-neon-yellow opacity-75" />
-      <span className="relative h-1.5 w-1.5 rounded-full bg-neon-yellow" />
+      <span className="relative h-1.5 w-1.5 shrink-0 rounded-full bg-neon-yellow" />
       Chờ duyệt
     </span>
   )
 }
 
+const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
+  { value: 'all', label: 'Tất cả' },
+  { value: 'pending', label: 'Chờ duyệt' },
+  { value: 'approved', label: 'Đã duyệt' },
+  { value: 'rejected', label: 'Từ chối' },
+]
+
 export default function FundTable({
   fundStatus,
   transactions,
+  topDonors,
+  defaultPayerName,
   isAdmin,
   onApprove,
+  onReject,
   onAdjustBalance,
   onReportPayment,
 }: FundTableProps) {
   const [isPending, startTransition] = useTransition()
-  const [approvingId, setApprovingId] = useState<string | null>(null)
-  const [approveError, setApproveError] = useState<string | null>(null)
+  const [actingId, setActingId] = useState<string | null>(null)
+  const [actionError, setActionError] = useState<string | null>(null)
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
+  const [search, setSearch] = useState('')
+  const [page, setPage] = useState(1)
 
   function handleApprove(id: string) {
-    setApprovingId(id)
-    setApproveError(null)
+    setActingId(id)
+    setActionError(null)
     startTransition(async () => {
       const result = await onApprove(id)
-      if (result.error) setApproveError(result.error)
-      setApprovingId(null)
+      if (result.error) setActionError(result.error)
+      setActingId(null)
+    })
+  }
+
+  function handleReject(id: string) {
+    setActingId(id)
+    setActionError(null)
+    startTransition(async () => {
+      const result = await onReject(id)
+      if (result.error) setActionError(result.error)
+      setActingId(null)
     })
   }
 
   const suggestedAmount = Math.round(
     (fundStatus.targetBudget - fundStatus.balance) / Math.max(transactions.filter(t => t.status === 'pending').length, 1)
   )
+
+  const filteredTransactions = useMemo(() => {
+    const query = search.trim().toLowerCase()
+    return transactions.filter(tx => {
+      if (statusFilter !== 'all' && tx.status !== statusFilter) return false
+      if (query && !tx.payerName.toLowerCase().includes(query)) return false
+      return true
+    })
+  }, [transactions, statusFilter, search])
+
+  const totalPages = Math.max(Math.ceil(filteredTransactions.length / PAGE_SIZE), 1)
+  const currentPage = Math.min(page, totalPages)
+  const pagedTransactions = filteredTransactions.slice(
+    (currentPage - 1) * PAGE_SIZE,
+    currentPage * PAGE_SIZE,
+  )
+
+  function handleStatusFilterChange(value: StatusFilter) {
+    setStatusFilter(value)
+    setPage(1)
+  }
+
+  function handleSearchChange(value: string) {
+    setSearch(value)
+    setPage(1)
+  }
 
   return (
     <div className="mx-auto max-w-4xl space-y-6 px-4 py-8 sm:px-6">
@@ -355,12 +480,45 @@ export default function FundTable({
 
         <BudgetSummaryCard fundStatus={fundStatus} isAdmin={isAdmin} onAdjust={onAdjustBalance} />
 
-        <MomoCard amount={suggestedAmount} className={fundStatus.className} onReportPayment={onReportPayment} />
+        <TopDonorsCard donors={topDonors} />
+
+        <MomoCard
+          amount={suggestedAmount}
+          className={fundStatus.className}
+          defaultPayerName={defaultPayerName}
+          onReportPayment={onReportPayment}
+        />
 
         <div className="rounded-xl border border-surface-border bg-surface-card shadow-card">
           <div className="border-b border-surface-border px-6 py-4">
             <h3 className="text-base font-semibold text-ink-primary">Giao dịch gần đây</h3>
-            {approveError && <p className="mt-1 text-xs font-medium text-neon-red">{approveError}</p>}
+            {actionError && <p className="mt-1 text-xs font-medium text-neon-red">{actionError}</p>}
+
+            <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex overflow-hidden rounded-lg border border-surface-border">
+                {STATUS_FILTERS.map(filter => (
+                  <button
+                    key={filter.value}
+                    type="button"
+                    onClick={() => handleStatusFilterChange(filter.value)}
+                    className={`px-3 py-1.5 text-xs font-semibold transition ${
+                      statusFilter === filter.value
+                        ? 'bg-brand/10 text-brand-light'
+                        : 'text-ink-muted hover:text-ink-primary'
+                    }`}
+                  >
+                    {filter.label}
+                  </button>
+                ))}
+              </div>
+              <input
+                type="text"
+                value={search}
+                onChange={e => handleSearchChange(e.target.value)}
+                placeholder="Tìm theo tên người nộp..."
+                className="rounded-lg border border-surface-border bg-surface-elevated px-3 py-1.5 text-xs text-ink-primary placeholder:text-ink-muted focus:border-brand focus:outline-none sm:w-64"
+              />
+            </div>
           </div>
 
           <div className="overflow-x-auto">
@@ -371,35 +529,90 @@ export default function FundTable({
                   <th className="px-6 py-3">Người nộp</th>
                   <th className="px-6 py-3">Lý do</th>
                   <th className="px-6 py-3">Số tiền</th>
+                  <th className="px-6 py-3">Thời gian</th>
                   <th className="px-6 py-3">Trạng thái</th>
                   <th className="px-6 py-3">Hành động</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-surface-border">
-                {transactions.map((tx, index) => (
+                {pagedTransactions.map((tx, index) => (
                   <tr key={tx.id} className="transition-colors hover:bg-surface-elevated">
-                    <td className="px-6 py-4 font-jetbrains text-ink-muted">{index + 1}</td>
+                    <td className="px-6 py-4 font-jetbrains text-ink-muted">
+                      {(currentPage - 1) * PAGE_SIZE + index + 1}
+                    </td>
                     <td className="px-6 py-4 font-medium text-ink-primary">{tx.payerName}</td>
                     <td className="px-6 py-4 text-ink-secondary">{tx.note ?? <span className="text-ink-muted">—</span>}</td>
-                    <td className="px-6 py-4 font-jetbrains font-semibold text-ink-primary">{formatVND(tx.amount)}</td>
-                    <td className="px-6 py-4">
+                    <td
+                      className={`px-6 py-4 font-jetbrains font-semibold ${
+                        tx.amount < 0 ? 'text-neon-red' : 'text-ink-primary'
+                      }`}
+                    >
+                      {formatVND(tx.amount)}
+                    </td>
+                    <td className="px-6 py-4 font-jetbrains text-xs text-ink-muted">{formatDateTime(tx.createdAt)}</td>
+                    <td className="whitespace-nowrap px-6 py-4">
                       <StatusBadge status={tx.status} />
                     </td>
                     <td className="px-6 py-4">
                       {tx.status === 'pending' && isAdmin && (
-                        <button
-                          onClick={() => handleApprove(tx.id)}
-                          disabled={isPending && approvingId === tx.id}
-                          className="rounded-lg bg-brand px-3 py-1.5 text-xs font-semibold text-ink-primary transition hover:bg-brand-dark focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2 focus:ring-offset-surface-base disabled:cursor-not-allowed disabled:opacity-50"
-                        >
-                          {isPending && approvingId === tx.id ? 'Đang duyệt...' : 'Duyệt'}
-                        </button>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleApprove(tx.id)}
+                            disabled={isPending && actingId === tx.id}
+                            className="rounded-lg bg-brand px-3 py-1.5 text-xs font-semibold text-ink-primary transition hover:bg-brand-dark focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2 focus:ring-offset-surface-base disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            {isPending && actingId === tx.id ? 'Đang duyệt...' : 'Duyệt'}
+                          </button>
+                          <button
+                            onClick={() => handleReject(tx.id)}
+                            disabled={isPending && actingId === tx.id}
+                            className="rounded-lg border border-surface-border px-3 py-1.5 text-xs font-semibold text-neon-red transition hover:border-neon-red hover:bg-neon-red/10 focus:outline-none focus:ring-2 focus:ring-neon-red focus:ring-offset-2 focus:ring-offset-surface-base disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            {isPending && actingId === tx.id ? 'Đang xử lý...' : 'Từ chối'}
+                          </button>
+                        </div>
                       )}
                     </td>
                   </tr>
                 ))}
+                {pagedTransactions.length === 0 && (
+                  <tr>
+                    <td colSpan={7} className="px-6 py-8 text-center text-ink-muted">
+                      Không có giao dịch nào phù hợp.
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
+          </div>
+
+          <div className="flex items-center justify-between border-t border-surface-border px-6 py-3">
+            <p className="text-xs text-ink-muted">
+              {filteredTransactions.length === 0
+                ? '0 giao dịch'
+                : `${(currentPage - 1) * PAGE_SIZE + 1}–${Math.min(currentPage * PAGE_SIZE, filteredTransactions.length)} / ${filteredTransactions.length} giao dịch`}
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setPage(p => Math.max(p - 1, 1))}
+                disabled={currentPage <= 1}
+                className="rounded-lg border border-surface-border px-3 py-1.5 text-xs font-semibold text-ink-secondary transition hover:border-brand hover:text-brand-light disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                ‹ Trước
+              </button>
+              <p className="font-jetbrains text-xs text-ink-muted">
+                Trang {currentPage}/{totalPages}
+              </p>
+              <button
+                type="button"
+                onClick={() => setPage(p => Math.min(p + 1, totalPages))}
+                disabled={currentPage >= totalPages}
+                className="rounded-lg border border-surface-border px-3 py-1.5 text-xs font-semibold text-ink-secondary transition hover:border-brand hover:text-brand-light disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Sau ›
+              </button>
+            </div>
           </div>
         </div>
       </div>

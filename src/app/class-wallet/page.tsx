@@ -2,7 +2,9 @@ import { revalidatePath } from 'next/cache'
 import {
   getClassFundStatus,
   getClassTransactions,
+  getTopDonors,
   approveTransaction,
+  rejectTransaction,
   adjustFundBalance,
   reportPayment,
 } from '@/modules/class-wallet/services'
@@ -13,9 +15,10 @@ import Navbar from '@/shared/components/Navbar'
 const FUND_ID = 'fund-002'
 
 export default async function ClassWalletPage() {
-  const [fundStatus, transactions, user] = await Promise.all([
+  const [fundStatus, transactions, topDonors, user] = await Promise.all([
     getClassFundStatus(FUND_ID),
     getClassTransactions(FUND_ID),
+    getTopDonors(FUND_ID),
     getCurrentUser(),
   ])
 
@@ -34,7 +37,26 @@ export default async function ClassWalletPage() {
     }
   }
 
-  async function handleReportPayment(amount: number, payerName: string): Promise<{ error?: string }> {
+  async function handleReject(transactionId: string): Promise<{ error?: string }> {
+    'use server'
+    try {
+      await requireAdmin()
+      await rejectTransaction(transactionId)
+      revalidatePath('/class-wallet')
+      return {}
+    } catch (err) {
+      if (err instanceof Error && err.message.startsWith('Unauthorized')) {
+        return { error: 'Bạn không có quyền từ chối giao dịch.' }
+      }
+      return { error: 'Đã có lỗi xảy ra, vui lòng thử lại.' }
+    }
+  }
+
+  async function handleReportPayment(
+    amount: number,
+    payerName: string,
+    reason: string,
+  ): Promise<{ error?: string }> {
     'use server'
     try {
       const reporter = await getCurrentUser()
@@ -42,7 +64,7 @@ export default async function ClassWalletPage() {
       if (!Number.isFinite(amount) || amount <= 0 || !payerName.trim()) {
         return { error: 'Vui lòng nhập số tiền và tên hợp lệ.' }
       }
-      await reportPayment(FUND_ID, amount, payerName.trim(), 'Chuyển khoản Momo')
+      await reportPayment(FUND_ID, amount, payerName.trim(), reason.trim() || 'Chuyển khoản Momo', reporter.id)
       revalidatePath('/class-wallet')
       return {}
     } catch (err) {
@@ -74,8 +96,11 @@ export default async function ClassWalletPage() {
       <FundTable
         fundStatus={fundStatus}
         transactions={transactions}
+        topDonors={topDonors}
+        defaultPayerName={user?.name ?? ''}
         isAdmin={user?.role === 'admin'}
         onApprove={handleApprove}
+        onReject={handleReject}
         onAdjustBalance={handleAdjustBalance}
         onReportPayment={handleReportPayment}
       />
