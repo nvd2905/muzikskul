@@ -1,0 +1,29 @@
+server {
+    listen 80;
+    listen [::]:80;
+
+    # COEXISTENCE: scope to muzikskul's own domain ONLY — NOT `default_server`.
+    # The existing app keeps its own server block / default_server; Nginx routes by
+    # server_name, so both sites coexist on ports 80/443.
+    server_name muzikskul.xyz www.muzikskul.xyz;
+
+    location / {
+        # COEXISTENCE: proxy to muzikskul's dedicated port (must match ecosystem.config.js).
+        proxy_pass http://127.0.0.1:3001;
+        proxy_http_version 1.1;
+
+        # Load-bearing for Discord OAuth: signInWithDiscord builds redirectTo
+        # from x-forwarded-proto + host. If these are wrong, prod login breaks.
+        proxy_set_header Host              $host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Host  $host;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header X-Real-IP         $remote_addr;
+
+        # WebSocket / HMR passthrough (harmless in prod, needed if ever used)
+        proxy_set_header Upgrade    $http_upgrade;
+        proxy_set_header Connection "upgrade";
+
+        proxy_read_timeout 60s;
+    }
+}
