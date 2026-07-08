@@ -10,7 +10,7 @@ import FundTable from '@/modules/class-wallet/components/FundTable'
 import { getCurrentUser, requireAdmin } from '@/modules/auth/actions'
 import Navbar from '@/shared/components/Navbar'
 
-const FUND_ID = 'fund-001'
+const FUND_ID = 'fund-002'
 
 export default async function ClassWalletPage() {
   const [fundStatus, transactions, user] = await Promise.all([
