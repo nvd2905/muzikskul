@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/supabase/server'
+import { getCurrentUser } from '@/modules/auth/actions'
 import {
   getPersonalTransactions,
   getWalletSummary,
@@ -16,10 +17,7 @@ import WalletDashboard from '@/modules/wallet/components/WalletDashboard'
 import Navbar from '@/shared/components/Navbar'
 
 export default async function MyWalletPage() {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const user = await getCurrentUser()
 
   if (!user) redirect('/login')
 
@@ -98,14 +96,7 @@ export default async function MyWalletPage() {
 
   return (
     <main className="min-h-screen bg-surface-base">
-      <Navbar
-        user={{
-          id: user.id,
-          email: user.email ?? null,
-          name: (user.user_metadata?.full_name ?? user.user_metadata?.name ?? null) as string | null,
-          avatarUrl: (user.user_metadata?.avatar_url ?? null) as string | null,
-        }}
-      />
+      <Navbar user={user} />
       <WalletDashboard
         summary={summary}
         transactions={transactions}

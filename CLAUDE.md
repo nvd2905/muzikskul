@@ -71,19 +71,21 @@ Protected path prefixes live in `PROTECTED_PREFIXES` in `src/middleware.ts` — 
 
 The matcher excludes `/auth/callback` so the OAuth code-exchange route can set the session cookie before any redirect logic fires.
 
-### OAuth flow (Discord via Supabase)
+### OAuth flow (Discord + Google via Supabase)
 
 ```
 /login
-  └── LoginButton (form action) → signInWithDiscord() server action
-        └── supabase.auth.signInWithOAuth → redirect to Discord
-              └── Discord → /auth/callback?code=...
+  └── LoginButton (form actions) → signInWithDiscord() / signInWithGoogle() server action
+        └── supabase.auth.signInWithOAuth → redirect to Discord / Google
+              └── provider → /auth/callback?code=...
                     └── exchangeCodeForSession → redirect to /class-wallet
 ```
 
-The `redirectTo` URL in `signInWithDiscord` is constructed from request headers (`x-forwarded-proto` + `host`) so it works in both local dev and production without a hardcoded env var.
+The `redirectTo` URL in `signInWithDiscord`/`signInWithGoogle` is constructed from request headers (`x-forwarded-proto` + `host`) so it works in both local dev and production without a hardcoded env var. Both actions share the same `/auth/callback` route.
 
-Both the Supabase dashboard (Authentication → URL Configuration) and the Discord Developer Portal (OAuth2 → Redirects) must have `http://localhost:3000/auth/callback` in their allowlists for local development.
+Both the Supabase dashboard (Authentication → URL Configuration) and each provider's developer console (Discord Developer Portal → OAuth2 → Redirects; Google Cloud Console → APIs & Services → Credentials → Authorized redirect URIs) must have `http://localhost:3000/auth/callback` in their allowlists for local development, plus the production callback URL for the deployed domain.
+
+**Account linking:** if a user signs in with Google using an email that already has a Discord-based account, Supabase Auth's built-in identity linking merges the new Google identity into the existing `auth.users` row (same `profiles` row, same role/history) — this happens automatically when both providers report a verified email, with no custom linking code in this repo. It requires the Supabase project's Auth setting that allows automatic linking to be left at its default (on); do not disable it. `handle_new_user` only fires on `auth.users` insert; a second trigger, `handle_user_update` (`013_sync_profile_on_user_update.sql`), fires on `auth.users` update to keep `profiles.email` current when a linked login refreshes it. `profiles.username` is intentionally *not* re-synced on update — it stays whatever was set at signup, so linking a second provider never changes the display name (re-syncing it previously caused the name to flip depending on which provider logged in most recently).
 
 ### Environment variables
 
@@ -99,7 +101,7 @@ Discord Client ID and Secret are stored in the Supabase dashboard (Authenticatio
 
 ### Roles (`profiles` table)
 
-`profiles` mirrors `auth.users` (one row per user, `id` is the FK) and adds a `role` column (`'admin' | 'member'`, default `'member'`) plus `email`/`username`. A `handle_new_user` trigger on `auth.users` keeps it populated on signup; see `supabase/migrations/003_add_profiles_role.sql` and `004_add_email_username_to_profiles.sql`.
+`profiles` mirrors `auth.users` (one row per user, `id` is the FK) and adds a `role` column (`'admin' | 'member'`, default `'member'`) plus `email`/`username`/`avatar_url`. A `handle_new_user` trigger on `auth.users` keeps it populated on signup; see `supabase/migrations/003_add_profiles_role.sql`, `004_add_email_username_to_profiles.sql`, and `014_add_avatar_url_to_profiles.sql`. `username` and `avatar_url` are set once at signup and never re-synced from a later linked login (see the account-linking note above) — `getCurrentUser()` reads both from `profiles`, falling back to live `user_metadata` only if the `profiles` value is null (e.g. rows created before `014`).
 
 `getCurrentUser()` in `src/modules/auth/actions.ts` joins `profiles.role` onto the returned user object. `requireAdmin()` (same file) throws if the caller isn't an admin — call it at the top of any Server Action that mutates admin-only data (see `handleApprove`/`handleReject`/`handleAdjustBalance` in `src/app/class-wallet/page.tsx`), and gate the corresponding UI with `isAdmin` props rather than relying on the throw alone.
 

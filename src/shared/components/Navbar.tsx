@@ -3,7 +3,6 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { signOut } from '@/modules/auth/actions'
-import LoginButton from '@/modules/auth/components/LoginButton'
 
 export type NavLink = { href: string; label: string }
 
@@ -91,7 +90,12 @@ export default function Navbar({ user, links = NAV_LINKS }: NavbarProps) {
             </form>
           </>
         ) : (
-          <LoginButton />
+          <Link
+            href="/login"
+            className="rounded-lg bg-brand px-3.5 py-1.5 text-[0.83rem] font-semibold text-ink-primary transition hover:bg-brand-dark focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2 focus:ring-offset-surface-base"
+          >
+            Log in
+          </Link>
         )}
       </div>
     </nav>

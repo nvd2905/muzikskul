@@ -24,10 +24,30 @@ export async function signInWithDiscord() {
   redirect(data.url)
 }
 
+export async function signInWithGoogle() {
+  const supabase = await createClient()
+  const headersList = await headers()
+
+  const proto = headersList.get('x-forwarded-proto') ?? 'http'
+  const host = headersList.get('host') ?? 'localhost:3000'
+  const origin = `${proto}://${host}`
+
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo: `${origin}/auth/callback`,
+    },
+  })
+
+  if (error) throw error
+
+  redirect(data.url)
+}
+
 export async function signOut() {
   const supabase = await createClient()
   await supabase.auth.signOut()
-  redirect('/login')
+  redirect('/')
 }
 
 export type UserRole = 'admin' | 'member'
@@ -43,15 +63,15 @@ export async function getCurrentUser() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role')
+    .select('role, username, avatar_url')
     .eq('id', user.id)
     .single()
 
   return {
     id: user.id,
     email: user.email ?? null,
-    name: (user.user_metadata?.full_name ?? user.user_metadata?.name ?? null) as string | null,
-    avatarUrl: (user.user_metadata?.avatar_url ?? null) as string | null,
+    name: (profile?.username ?? user.user_metadata?.full_name ?? user.user_metadata?.name ?? null) as string | null,
+    avatarUrl: (profile?.avatar_url ?? user.user_metadata?.avatar_url ?? null) as string | null,
     role: (profile?.role ?? 'member') as UserRole,
   }
 }
