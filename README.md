@@ -76,11 +76,21 @@ Modules do not import from each other — see `.claude/rules/architecture.md` fo
 
 | Module | Status |
 |---|---|
-| `class-wallet` | Balance tracking, Momo QR collection with member self-reported payments, admin-approved transactions |
+| `class-wallet` | Balance tracking, Momo QR collection with member self-reported payments (name defaults to your Discord username), admin approve/reject, a top-3-donors leaderboard, and a filterable/paginated transaction history |
 | `auth` | Discord OAuth2 login/logout, role lookup (`admin` / `member`) |
 | `gold-price` | Domestic gold price dashboard + 24h history, viewable without auth |
 | `wallet` | Personal income/expense tracker (`/my-wallet`) — quick-add form, running balance, encrypted `amount`/`category`/`description` (see `WALLET_ENCRYPTION_KEY` above) |
 | `muzik` | Scaffolding only |
+
+## Deployment
+
+Production deploys run through GitHub Actions on each published Release — merging to `main` does not deploy by itself. To ship:
+
+```bash
+./scripts/release.sh "<what changed>"   # cuts a release, auto-bumps the patch version
+```
+
+That triggers `.github/workflows/deploy.yml`, which SSHes into the VPS and runs `scripts/deploy.sh` (checkout tag → build → reload under PM2). Full one-time VPS setup and required GitHub secrets are in [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
 
 ## Further reading
 
