@@ -9,8 +9,8 @@ export default async function LandingPage() {
   const user = await getCurrentUser()
 
   return (
-    <div className="min-h-screen overflow-x-hidden bg-[#0A0E1A] text-[#E8E8F0]">
-      {/* Scanline overlay — purely decorative */}
+    <div className="min-h-screen overflow-x-hidden bg-surface-base text-ink-primary">
+      {/* Scanline overlay — purely decorative, not a design-system color */}
       <div
         aria-hidden="true"
         className="pointer-events-none fixed inset-0 z-[999]"
@@ -24,7 +24,8 @@ export default async function LandingPage() {
 
       {/* ── HERO ────────────────────────────────────────────────────── */}
       <section className="relative">
-        {/* Subtle grid */}
+        {/* Subtle grid — multi-stop background pattern, kept as style since Tailwind
+            utilities can't express a repeating grid line pattern; color matches accent */}
         <div
           aria-hidden="true"
           className="pointer-events-none absolute inset-0"
@@ -36,13 +37,13 @@ export default async function LandingPage() {
             backgroundSize: '48px 48px',
           }}
         />
-        {/* Ambient glow blobs */}
+        {/* Ambient glow blobs — accent + brand tint */}
         <div
           aria-hidden="true"
           className="pointer-events-none absolute inset-0"
           style={{
             background:
-              'radial-gradient(ellipse 70% 55% at 15% 55%, rgba(6,182,212,0.07) 0%, transparent 65%), radial-gradient(ellipse 50% 55% at 85% 45%, rgba(129,140,248,0.06) 0%, transparent 65%)',
+              'radial-gradient(ellipse 70% 55% at 15% 55%, rgba(6,182,212,0.07) 0%, transparent 65%), radial-gradient(ellipse 50% 55% at 85% 45%, rgba(124,58,237,0.06) 0%, transparent 65%)',
           }}
         />
 
@@ -50,31 +51,24 @@ export default async function LandingPage() {
 
           {/* Left: copy */}
           <div className="order-2 lg:order-1">
-            <div className="mb-7 inline-flex items-center gap-2 rounded-full border border-cyan-500/20 bg-cyan-500/[0.08] px-3.5 py-1">
-              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-cyan-400" />
-              <span className="font-jetbrains text-[0.68rem] font-medium uppercase tracking-[0.14em] text-cyan-300">
+            <div className="mb-7 inline-flex items-center gap-2 rounded-full border border-accent/20 bg-accent/[0.08] px-3.5 py-1">
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-accent-light" />
+              <span className="font-jetbrains text-[0.68rem] font-medium uppercase tracking-[0.14em] text-accent-light">
                 For students &amp; friend groups
               </span>
             </div>
 
             <h1 className="mb-6 font-orbitron text-[clamp(2rem,5vw,4rem)] font-black leading-[1.06] tracking-[-0.015em]">
-              <span className="block text-[#E8E8F0]">The Ultimate</span>
-              <span
-                className="block text-transparent"
-                style={{
-                  backgroundImage: 'linear-gradient(135deg, #06b6d4 0%, #818cf8 55%, #e879f9 100%)',
-                  WebkitBackgroundClip: 'text',
-                  backgroundClip: 'text',
-                }}
-              >
+              <span className="block text-ink-primary">The Ultimate</span>
+              <span className="block bg-brand-gradient bg-clip-text text-transparent">
                 Digital Hub
               </span>
-              <span className="block text-[0.58em] font-bold tracking-[0.01em] text-[#374151]">
+              <span className="block text-[0.58em] font-bold tracking-[0.01em] text-ink-muted">
                 for Your Inner Circle
               </span>
             </h1>
 
-            <p className="mb-10 max-w-[490px] text-[0.97rem] leading-[1.8] text-[#6B7280]">
+            <p className="mb-10 max-w-[490px] text-[0.97rem] leading-[1.8] text-ink-secondary">
               Stream music, watch movies, split bills, manage class funds, and share
               stories—all in one shared space.
             </p>
@@ -83,7 +77,7 @@ export default async function LandingPage() {
               <form action={signInWithDiscord}>
                 <button
                   type="submit"
-                  className="flex cursor-pointer items-center gap-2.5 rounded-[0.65rem] bg-cyan-500 px-6 py-3 text-[0.88rem] font-semibold text-[#0A0E1A] shadow-[0_0_24px_rgba(6,182,212,0.35)] transition-all duration-200 hover:bg-cyan-400 hover:shadow-[0_0_40px_rgba(6,182,212,0.55)] active:scale-[0.97]"
+                  className="flex cursor-pointer items-center gap-2.5 rounded-[0.65rem] bg-brand px-6 py-3 text-[0.88rem] font-semibold text-ink-primary shadow-brand-glow transition-all duration-200 hover:bg-brand-dark focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2 focus:ring-offset-surface-base active:scale-[0.97]"
                 >
                   <DiscordIcon />
                   Get Started with Discord
@@ -91,7 +85,7 @@ export default async function LandingPage() {
               </form>
               <a
                 href="#ecosystem"
-                className="flex items-center rounded-[0.65rem] border border-white/[0.08] bg-transparent px-6 py-3 text-[0.88rem] font-semibold text-[#6B7280] transition-all duration-200 hover:border-white/[0.16] hover:bg-white/[0.04] hover:text-[#E8E8F0]"
+                className="flex items-center rounded-[0.65rem] border border-surface-border bg-transparent px-6 py-3 text-[0.88rem] font-semibold text-ink-secondary transition-all duration-200 hover:border-brand hover:bg-surface-elevated hover:text-brand-light"
               >
                 Explore Features →
               </a>
@@ -100,45 +94,31 @@ export default async function LandingPage() {
 
           {/* Right: oscilloscope panel */}
           <div className="order-1 lg:order-2">
-            <div
-              className="overflow-hidden rounded-[1.25rem] border border-white/[0.07]"
-              style={{
-                background:
-                  'linear-gradient(135deg, rgba(6,182,212,0.04) 0%, rgba(10,14,26,1) 50%)',
-                boxShadow:
-                  '0 0 0 1px rgba(6,182,212,0.08), 0 0 50px rgba(6,182,212,0.04), inset 0 1px 0 rgba(255,255,255,0.04)',
-              }}
-            >
+            <div className="overflow-hidden rounded-[1.25rem] border border-surface-border bg-gradient-to-br from-accent/[0.04] to-surface-base shadow-accent-glow">
               {/* Title bar */}
-              <div className="flex items-center gap-1.5 border-b border-white/[0.07] bg-white/[0.02] px-4 py-2.5">
-                <span className="h-2.5 w-2.5 rounded-full bg-[#FF5F56]" />
-                <span className="h-2.5 w-2.5 rounded-full bg-[#FFBD2E]" />
-                <span className="h-2.5 w-2.5 rounded-full bg-[#27C93F]" />
-                <span className="ml-auto font-jetbrains text-[0.65rem] font-medium uppercase tracking-[0.14em] text-[#6B7280]">
+              <div className="flex items-center gap-1.5 border-b border-surface-border bg-surface-elevated/40 px-4 py-2.5">
+                <span className="h-2.5 w-2.5 rounded-full bg-neon-red" />
+                <span className="h-2.5 w-2.5 rounded-full bg-neon-yellow" />
+                <span className="h-2.5 w-2.5 rounded-full bg-neon-green" />
+                <span className="ml-auto font-jetbrains text-[0.65rem] font-medium uppercase tracking-[0.14em] text-ink-muted">
                   Live Signal
                 </span>
               </div>
               {/* Canvas */}
-              <div className="h-[190px] w-full bg-[#0A0E1A]">
+              <div className="h-[190px] w-full bg-surface-base">
                 <WaveformCanvas />
               </div>
               {/* Stats */}
-              <div className="grid grid-cols-2 border-t border-white/[0.07]">
-                <div className="border-r border-white/[0.07] px-4 py-3">
-                  <p className="mb-0.5 font-jetbrains text-[0.68rem] text-[#6B7280]">Class Fund</p>
-                  <p
-                    className="font-orbitron text-[1rem] font-bold"
-                    style={{ color: '#fbbf24', textShadow: '0 0 14px rgba(251,191,36,0.5)' }}
-                  >
+              <div className="grid grid-cols-2 border-t border-surface-border">
+                <div className="border-r border-surface-border px-4 py-3">
+                  <p className="mb-0.5 font-jetbrains text-[0.68rem] text-ink-muted">Class Fund</p>
+                  <p className="font-orbitron text-[1rem] font-bold text-neon-yellow drop-shadow-[0_0_14px_rgba(245,158,11,0.5)]">
                     ₫1.2M
                   </p>
                 </div>
                 <div className="px-4 py-3">
-                  <p className="mb-0.5 font-jetbrains text-[0.68rem] text-[#6B7280]">Listening now</p>
-                  <p
-                    className="font-orbitron text-[1rem] font-bold"
-                    style={{ color: '#06b6d4', textShadow: '0 0 14px rgba(6,182,212,0.5)' }}
-                  >
+                  <p className="mb-0.5 font-jetbrains text-[0.68rem] text-ink-muted">Listening now</p>
+                  <p className="font-orbitron text-[1rem] font-bold text-accent drop-shadow-[0_0_14px_rgba(6,182,212,0.5)]">
                     3 rooms
                   </p>
                 </div>
@@ -154,15 +134,15 @@ export default async function LandingPage() {
 
         <div className="mx-auto max-w-[1100px]">
           <div className="mb-16 text-center">
-            <p className="font-jetbrains mb-3 text-[0.68rem] font-medium uppercase tracking-[0.2em] text-cyan-500">
+            <p className="font-jetbrains mb-3 text-[0.68rem] font-medium uppercase tracking-[0.2em] text-accent">
               Core Features
             </p>
-            <h2 className="font-orbitron text-[clamp(1.55rem,3.5vw,2.4rem)] font-black leading-[1.15] tracking-[-0.01em] text-[#E8E8F0]">
+            <h2 className="font-orbitron text-[clamp(1.55rem,3.5vw,2.4rem)] font-black leading-[1.15] tracking-[-0.01em] text-ink-primary">
               One Space.
               <br />
               Every Service.
             </h2>
-            <p className="mx-auto mt-4 max-w-[480px] text-[0.92rem] leading-[1.75] text-[#6B7280]">
+            <p className="mx-auto mt-4 max-w-[480px] text-[0.92rem] leading-[1.75] text-ink-secondary">
               Three interconnected hubs built for the way your group actually lives—not
               how you wish you did.
             </p>
@@ -184,8 +164,8 @@ export default async function LandingPage() {
               href="/my-wallet"
             />
             <EcosystemCard
-              color="#818cf8"
-              glowRgb="129,140,248"
+              color="#7c3aed"
+              glowRgb="124,58,237"
               icon={<FinanceIcon />}
               tag="Finance Hub"
               title="Money, Sorted"
@@ -198,8 +178,8 @@ export default async function LandingPage() {
               href="/class-wallet"
             />
             <EcosystemCard
-              color="#e879f9"
-              glowRgb="232,121,249"
+              color="#10b981"
+              glowRgb="16,185,129"
               icon={<SocialIcon />}
               tag="Social Space"
               title="Stay Connected"
@@ -217,28 +197,28 @@ export default async function LandingPage() {
 
       {/* ── FUTURE LAB ──────────────────────────────────────────────── */}
       <section className="relative px-6 py-28 lg:px-8">
-        <SectionDivider color="rgba(232,121,249,0.18)" />
+        <SectionDivider color="rgba(124,58,237,0.18)" />
         {/* Ambient background */}
         <div
           aria-hidden="true"
           className="pointer-events-none absolute inset-0"
           style={{
             background:
-              'radial-gradient(ellipse 55% 50% at 50% 50%, rgba(129,140,248,0.04) 0%, transparent 70%)',
+              'radial-gradient(ellipse 55% 50% at 50% 50%, rgba(124,58,237,0.04) 0%, transparent 70%)',
           }}
         />
 
         <div className="relative mx-auto max-w-[1100px]">
           <div className="mb-16 text-center">
-            <p className="font-jetbrains mb-3 text-[0.68rem] font-medium uppercase tracking-[0.2em] text-violet-400">
+            <p className="font-jetbrains mb-3 text-[0.68rem] font-medium uppercase tracking-[0.2em] text-brand-light">
               Future Lab
             </p>
-            <h2 className="font-orbitron text-[clamp(1.55rem,3.5vw,2.4rem)] font-black leading-[1.15] tracking-[-0.01em] text-[#E8E8F0]">
+            <h2 className="font-orbitron text-[clamp(1.55rem,3.5vw,2.4rem)] font-black leading-[1.15] tracking-[-0.01em] text-ink-primary">
               The Evolution
               <br />
               Never Stops
             </h2>
-            <p className="mx-auto mt-4 max-w-[520px] text-[0.92rem] leading-[1.75] text-[#6B7280]">
+            <p className="mx-auto mt-4 max-w-[520px] text-[0.92rem] leading-[1.75] text-ink-secondary">
               We are constantly building new tools for your squad. Have an idea? Suggest
               it below.
             </p>
@@ -257,13 +237,13 @@ export default async function LandingPage() {
       </section>
 
       {/* ── FOOTER ──────────────────────────────────────────────────── */}
-      <footer className="border-t border-white/[0.06] bg-[#080B14] px-6 py-12 lg:px-8">
+      <footer className="border-t border-surface-border bg-surface-base px-6 py-12 lg:px-8">
         <div className="mx-auto flex max-w-[1100px] flex-wrap items-center justify-between gap-6">
           <div>
-            <p className="font-orbitron text-[0.72rem] font-bold uppercase tracking-[0.2em] text-[#E8E8F0]">
-              Muzik<span className="text-cyan-400">skul</span>
+            <p className="font-orbitron text-[0.72rem] font-bold uppercase tracking-[0.2em] text-ink-primary">
+              Muzik<span className="text-accent">skul</span>
             </p>
-            <p className="mt-1 font-jetbrains text-[0.73rem] text-[#374151]">
+            <p className="mt-1 font-jetbrains text-[0.73rem] text-ink-muted">
               Music. Money. Community.
             </p>
           </div>
@@ -278,7 +258,7 @@ export default async function LandingPage() {
               <li key={href}>
                 <Link
                   href={href}
-                  className="text-[0.82rem] text-[#6B7280] transition-colors duration-150 hover:text-[#E8E8F0]"
+                  className="text-[0.82rem] text-ink-secondary transition-colors duration-150 hover:text-ink-primary"
                 >
                   {label}
                 </Link>
@@ -286,7 +266,7 @@ export default async function LandingPage() {
             ))}
           </ul>
 
-          <p className="font-jetbrains text-[0.7rem] text-[#374151]">© 2026 Muzikskul</p>
+          <p className="font-jetbrains text-[0.7rem] text-ink-muted">© 2026 Muzikskul</p>
         </div>
       </footer>
     </div>
@@ -317,13 +297,15 @@ type EcosystemCardProps = {
   href: string
 }
 
+// color/glowRgb are always one of the design-system token hex values (accent,
+// brand, neon-green) passed per card; still needs `style` because Tailwind
+// can't compile a className from a runtime template literal.
 function EcosystemCard({ color, glowRgb, icon, tag, title, features, href }: EcosystemCardProps) {
   return (
     <div
-      className="group relative overflow-hidden rounded-[1.25rem] border border-white/[0.07] p-7 transition-all duration-300 hover:-translate-y-1.5"
+      className="group relative overflow-hidden rounded-[1.25rem] border border-surface-border p-7 transition-all duration-300 hover:-translate-y-1.5"
       style={{
-        background: `linear-gradient(135deg, rgba(${glowRgb},0.06) 0%, rgba(10,14,26,0.95) 55%)`,
-        boxShadow: `0 0 0 1px rgba(255,255,255,0.04)`,
+        background: `linear-gradient(135deg, rgba(${glowRgb},0.06) 0%, rgba(9,9,15,0.95) 55%)`,
       }}
     >
       {/* Top line accent */}
@@ -342,7 +324,7 @@ function EcosystemCard({ color, glowRgb, icon, tag, title, features, href }: Eco
 
       {/* Icon */}
       <div
-        className="mb-5 flex h-11 w-11 items-center justify-center rounded-xl border border-white/[0.07]"
+        className="mb-5 flex h-11 w-11 items-center justify-center rounded-xl border border-surface-border"
         style={{
           color,
           background: `rgba(${glowRgb},0.1)`,
@@ -360,12 +342,12 @@ function EcosystemCard({ color, glowRgb, icon, tag, title, features, href }: Eco
       </p>
 
       {/* Title */}
-      <h3 className="font-orbitron mb-5 text-[1.05rem] font-bold text-[#E8E8F0]">{title}</h3>
+      <h3 className="font-orbitron mb-5 text-[1.05rem] font-bold text-ink-primary">{title}</h3>
 
       {/* Feature list */}
       <ul className="space-y-2.5">
         {features.map((f) => (
-          <li key={f} className="flex items-start gap-2.5 text-[0.85rem] leading-[1.5] text-[#9CA3AF]">
+          <li key={f} className="flex items-start gap-2.5 text-[0.85rem] leading-[1.5] text-ink-secondary">
             <svg
               width="14"
               height="14"
@@ -415,8 +397,8 @@ function FutureCard({ hint, delay }: { hint: string; delay: string }) {
     <div
       className="relative overflow-hidden rounded-[1.25rem] p-7"
       style={{
-        border: '1.5px dashed rgba(129,140,248,0.2)',
-        background: 'rgba(129,140,248,0.025)',
+        border: '1.5px dashed rgba(124,58,237,0.2)',
+        background: 'rgba(124,58,237,0.025)',
       }}
     >
       {/* Glass blur layer */}
@@ -425,15 +407,15 @@ function FutureCard({ hint, delay }: { hint: string; delay: string }) {
       <div className="relative flex flex-col items-center justify-center gap-4 py-6">
         {/* Question mark icon */}
         <div
-          className="flex h-14 w-14 items-center justify-center rounded-2xl border border-violet-500/15"
-          style={{ background: 'rgba(129,140,248,0.06)' }}
+          className="flex h-14 w-14 items-center justify-center rounded-2xl border border-brand/15"
+          style={{ background: 'rgba(124,58,237,0.06)' }}
         >
           <svg
             width="24"
             height="24"
             viewBox="0 0 24 24"
             fill="none"
-            stroke="rgba(129,140,248,0.4)"
+            stroke="rgba(124,58,237,0.4)"
             strokeWidth="1.75"
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -446,7 +428,7 @@ function FutureCard({ hint, delay }: { hint: string; delay: string }) {
         </div>
 
         <p
-          className="font-jetbrains text-center text-[0.75rem] font-medium tracking-[0.12em] text-violet-400/40"
+          className="font-jetbrains text-center text-[0.75rem] font-medium tracking-[0.12em] text-brand-light/40"
           style={{ animationDelay: delay }}
         >
           {hint}
@@ -457,7 +439,7 @@ function FutureCard({ hint, delay }: { hint: string; delay: string }) {
           {[0, 1, 2].map((i) => (
             <span
               key={i}
-              className="h-1 w-1 animate-pulse rounded-full bg-violet-500/25"
+              className="h-1 w-1 animate-pulse rounded-full bg-brand/25"
               style={{ animationDelay: `${i * 0.25}s` }}
             />
           ))}

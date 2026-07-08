@@ -20,29 +20,30 @@ export default function FeatureSuggestion() {
 
   if (status === 'done') {
     return (
-      <div className="mx-auto max-w-xl rounded-[1.25rem] border border-emerald-500/20 bg-emerald-500/[0.05] px-8 py-6 text-center">
+      <div className="mx-auto max-w-xl rounded-[1.25rem] border border-neon-green/20 bg-neon-green/[0.05] px-8 py-6 text-center">
         <div className="mb-3 flex justify-center">
           <svg
             width="24"
             height="24"
             viewBox="0 0 24 24"
             fill="none"
-            stroke="#10b981"
+            stroke="currentColor"
             strokeWidth="2"
             strokeLinecap="round"
             strokeLinejoin="round"
             aria-hidden="true"
+            className="text-neon-green"
           >
             <path d="M20 6L9 17l-5-5" />
           </svg>
         </div>
-        <p className="font-orbitron text-[0.85rem] font-bold text-emerald-400">Idea Received!</p>
-        <p className="mt-1 text-[0.82rem] leading-relaxed text-[#6B7280]">
+        <p className="font-orbitron text-[0.85rem] font-bold text-neon-green">Idea Received!</p>
+        <p className="mt-1 text-[0.82rem] leading-relaxed text-ink-secondary">
           We&apos;ll review your suggestion. Thanks for building with us.
         </p>
         <button
           onClick={() => setStatus('idle')}
-          className="mt-4 cursor-pointer text-[0.8rem] text-[#6B7280] underline transition hover:text-[#E8E8F0]"
+          className="mt-4 cursor-pointer text-[0.8rem] text-ink-secondary underline transition hover:text-ink-primary"
         >
           Submit another
         </button>
@@ -63,12 +64,12 @@ export default function FeatureSuggestion() {
           onChange={(e) => setValue(e.target.value)}
           placeholder="e.g. Group task board, shared calendar, mini-games..."
           disabled={status === 'loading'}
-          className="min-h-[48px] flex-1 rounded-[0.65rem] border border-white/[0.08] bg-white/[0.03] px-4 text-[0.88rem] text-[#E8E8F0] placeholder-[#4b5563] outline-none transition-all duration-200 focus:border-violet-500/40 focus:bg-white/[0.05] focus:ring-2 focus:ring-violet-500/20 disabled:opacity-50"
+          className="min-h-[48px] flex-1 rounded-[0.65rem] border border-surface-border bg-surface-elevated/30 px-4 text-[0.88rem] text-ink-primary placeholder-ink-muted outline-none transition-all duration-200 focus:border-brand/40 focus:bg-surface-elevated focus:ring-2 focus:ring-brand/20 disabled:opacity-50"
         />
         <button
           type="submit"
           disabled={!value.trim() || status === 'loading'}
-          className="min-h-[48px] cursor-pointer rounded-[0.65rem] bg-violet-600 px-6 text-[0.88rem] font-semibold text-white shadow-[0_0_20px_rgba(139,92,246,0.25)] transition-all duration-200 hover:bg-violet-500 hover:shadow-[0_0_32px_rgba(139,92,246,0.4)] disabled:cursor-not-allowed disabled:opacity-40"
+          className="min-h-[48px] cursor-pointer rounded-[0.65rem] bg-brand px-6 text-[0.88rem] font-semibold text-ink-primary shadow-brand-glow transition-all duration-200 hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-40"
         >
           {status === 'loading' ? (
             <span className="flex items-center gap-2">
