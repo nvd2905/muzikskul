@@ -18,6 +18,8 @@ export type PersonalTransaction = {
   category: TransactionCategory
   description: string | null
   createdAt: string
+  createdBy: string | null
+  creatorName: string | null
 }
 
 export type WalletSummary = {
@@ -30,4 +32,27 @@ export type CategoryBreakdown = {
   category: TransactionCategory
   total: number
   percentage: number
+}
+
+export type SharePermission = 'view' | 'edit'
+
+export type PersonalAccount = {
+  id: string
+  name: string
+  ownerId: string
+}
+
+export type WalletRole = 'owner' | 'partner'
+
+export type WalletMember = {
+  userId: string
+  username: string | null
+  role: WalletRole
+  permission: SharePermission | null
+}
+
+export type AccessibleWallet = {
+  account: PersonalAccount
+  role: WalletRole
+  permission: SharePermission
 }

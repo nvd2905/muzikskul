@@ -1,16 +1,179 @@
 import { createClient } from '@/supabase/server'
 import { decryptField, encryptField } from './crypto'
-import type { CategoryBreakdown, PersonalTransaction, TransactionCategory, TransactionType, WalletSummary } from './types'
+import type {
+  AccessibleWallet,
+  CategoryBreakdown,
+  PersonalAccount,
+  PersonalTransaction,
+  SharePermission,
+  TransactionCategory,
+  TransactionType,
+  WalletMember,
+  WalletSummary,
+} from './types'
 
 export * from './types'
 
-export async function getPersonalTransactions(userId: string): Promise<PersonalTransaction[]> {
+function mapAccount(row: { id: string; name: string; owner_id: string }): PersonalAccount {
+  return { id: row.id, name: row.name, ownerId: row.owner_id }
+}
+
+async function getUsernameMap(supabase: Awaited<ReturnType<typeof createClient>>): Promise<Map<string, string | null>> {
+  const { data, error } = await supabase.rpc('get_all_usernames')
+  if (error) throw error
+  return new Map(((data ?? []) as { id: string; username: string | null }[]).map(row => [row.id, row.username]))
+}
+
+export async function ensureDefaultAccount(userId: string): Promise<PersonalAccount> {
   const supabase = await createClient()
-  const { data, error } = await supabase
-    .from('personal_transactions')
-    .select('id, amount, type, category, description, created_at')
-    .eq('user_id', userId)
-    .order('created_at', { ascending: false })
+  const { data: existing, error: fetchError } = await supabase
+    .from('personal_accounts')
+    .select('id, name, owner_id')
+    .eq('owner_id', userId)
+    .limit(1)
+    .maybeSingle()
+  if (fetchError) throw fetchError
+  if (existing) return mapAccount(existing)
+
+  const { data: created, error: insertError } = await supabase
+    .from('personal_accounts')
+    .insert({ owner_id: userId })
+    .select('id, name, owner_id')
+    .single()
+  if (insertError) throw insertError
+  return mapAccount(created)
+}
+
+export async function getAccessibleWallets(userId: string): Promise<AccessibleWallet[]> {
+  const supabase = await createClient()
+  const [{ data: owned, error: ownedError }, { data: shared, error: sharedError }] = await Promise.all([
+    supabase.from('personal_accounts').select('id, name, owner_id').eq('owner_id', userId),
+    supabase
+      .from('wallet_shares')
+      .select('permission_level, personal_accounts(id, name, owner_id)')
+      .eq('shared_with_user_id', userId),
+  ])
+  if (ownedError) throw ownedError
+  if (sharedError) throw sharedError
+
+  const ownedWallets: AccessibleWallet[] = (owned ?? []).map(row => ({
+    account: mapAccount(row),
+    role: 'owner',
+    permission: 'edit',
+  }))
+
+  const sharedWallets: AccessibleWallet[] = (shared ?? [])
+    .filter(row => row.personal_accounts?.[0])
+    .map(row => ({
+      account: mapAccount(row.personal_accounts[0]),
+      role: 'partner',
+      permission: row.permission_level as SharePermission,
+    }))
+
+  return [...ownedWallets, ...sharedWallets]
+}
+
+export async function getSharedWallets(userId: string): Promise<AccessibleWallet[]> {
+  const wallets = await getAccessibleWallets(userId)
+  return wallets.filter(wallet => wallet.role === 'partner')
+}
+
+export async function getWalletAccess(accountId: string, userId: string): Promise<AccessibleWallet | null> {
+  const wallets = await getAccessibleWallets(userId)
+  return wallets.find(wallet => wallet.account.id === accountId) ?? null
+}
+
+export async function getWalletMembers(accountId: string): Promise<WalletMember[]> {
+  const supabase = await createClient()
+  const [{ data: account, error: accountError }, { data: shares, error: sharesError }, usernameById] =
+    await Promise.all([
+      supabase.from('personal_accounts').select('owner_id').eq('id', accountId).single(),
+      supabase.from('wallet_shares').select('shared_with_user_id, permission_level').eq('account_id', accountId),
+      getUsernameMap(supabase),
+    ])
+  if (accountError) throw accountError
+  if (sharesError) throw sharesError
+
+  const members: WalletMember[] = [
+    {
+      userId: account.owner_id,
+      username: usernameById.get(account.owner_id) ?? null,
+      role: 'owner',
+      permission: null,
+    },
+  ]
+  for (const share of shares ?? []) {
+    members.push({
+      userId: share.shared_with_user_id,
+      username: usernameById.get(share.shared_with_user_id) ?? null,
+      role: 'partner',
+      permission: share.permission_level as SharePermission,
+    })
+  }
+  return members
+}
+
+export async function inviteUserToWallet(
+  accountId: string,
+  email: string,
+  permission: SharePermission,
+): Promise<{ error?: string }> {
+  const supabase = await createClient()
+
+  const { data: account, error: accountError } = await supabase
+    .from('personal_accounts')
+    .select('owner_id')
+    .eq('id', accountId)
+    .single()
+  if (accountError) throw accountError
+
+  const { data: matches, error: lookupError } = await supabase.rpc('find_user_by_email', {
+    p_email: email.trim(),
+  })
+  if (lookupError) throw lookupError
+  const match = (matches as { id: string; username: string | null }[] | null)?.[0]
+  if (!match) return { error: 'Không tìm thấy người dùng với email này.' }
+  if (match.id === account.owner_id) return { error: 'Đây đã là chủ sở hữu ví này.' }
+
+  const { data: existingShare, error: existingError } = await supabase
+    .from('wallet_shares')
+    .select('id')
+    .eq('account_id', accountId)
+    .eq('shared_with_user_id', match.id)
+    .maybeSingle()
+  if (existingError) throw existingError
+  if (existingShare) return { error: 'Người dùng này đã có quyền truy cập ví.' }
+
+  const { error: insertError } = await supabase.from('wallet_shares').insert({
+    account_id: accountId,
+    shared_with_user_id: match.id,
+    permission_level: permission,
+  })
+  if (insertError) return { error: 'Đã có lỗi xảy ra, vui lòng thử lại.' }
+
+  return {}
+}
+
+export async function revokeWalletShare(accountId: string, sharedWithUserId: string): Promise<void> {
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from('wallet_shares')
+    .delete()
+    .eq('account_id', accountId)
+    .eq('shared_with_user_id', sharedWithUserId)
+  if (error) throw error
+}
+
+export async function getPersonalTransactions(accountId: string): Promise<PersonalTransaction[]> {
+  const supabase = await createClient()
+  const [{ data, error }, usernameById] = await Promise.all([
+    supabase
+      .from('personal_transactions')
+      .select('id, amount, type, category, description, created_at, user_id')
+      .eq('account_id', accountId)
+      .order('created_at', { ascending: false }),
+    getUsernameMap(supabase),
+  ])
   if (error) throw error
   return (data ?? []).map(row => ({
     id: row.id,
@@ -19,15 +182,17 @@ export async function getPersonalTransactions(userId: string): Promise<PersonalT
     category: decryptField(row.category) as TransactionCategory,
     description: row.description ? decryptField(row.description) : null,
     createdAt: row.created_at,
+    createdBy: row.user_id,
+    creatorName: row.user_id ? (usernameById.get(row.user_id) ?? null) : null,
   }))
 }
 
-export async function getWalletSummary(userId: string): Promise<WalletSummary> {
+export async function getWalletSummary(accountId: string): Promise<WalletSummary> {
   const supabase = await createClient()
   const { data, error } = await supabase
     .from('personal_transactions')
     .select('amount, type')
-    .eq('user_id', userId)
+    .eq('account_id', accountId)
   if (error) throw error
 
   const totals = (data ?? []).reduce(
@@ -47,12 +212,12 @@ export async function getWalletSummary(userId: string): Promise<WalletSummary> {
   }
 }
 
-export async function getCategoryBreakdown(userId: string): Promise<CategoryBreakdown[]> {
+export async function getCategoryBreakdown(accountId: string): Promise<CategoryBreakdown[]> {
   const supabase = await createClient()
   const { data, error } = await supabase
     .from('personal_transactions')
     .select('amount, category')
-    .eq('user_id', userId)
+    .eq('account_id', accountId)
     .eq('type', 'expense')
   if (error) throw error
 
@@ -74,23 +239,29 @@ export async function getCategoryBreakdown(userId: string): Promise<CategoryBrea
     .sort((a, b) => b.total - a.total)
 }
 
-export async function getUserCategories(userId: string): Promise<string[]> {
+export async function getUserCategories(accountId: string): Promise<string[]> {
   const supabase = await createClient()
   const { data, error } = await supabase
     .from('personal_categories')
     .select('name')
-    .eq('user_id', userId)
+    .eq('account_id', accountId)
     .order('created_at', { ascending: true })
   if (error) throw error
   return (data ?? []).map(row => decryptField(row.name))
 }
 
-export async function addUserCategory(userId: string, name: string, existing: string[]): Promise<void> {
+export async function addUserCategory(
+  accountId: string,
+  userId: string,
+  name: string,
+  existing: string[],
+): Promise<void> {
   const isDuplicate = existing.some(c => c.toLowerCase() === name.toLowerCase())
   if (isDuplicate) return
 
   const supabase = await createClient()
   const { error } = await supabase.from('personal_categories').insert({
+    account_id: accountId,
     user_id: userId,
     name: encryptField(name),
   })
@@ -98,7 +269,8 @@ export async function addUserCategory(userId: string, name: string, existing: st
 }
 
 export async function addPersonalTransaction(
-  userId: string,
+  accountId: string,
+  createdBy: string,
   amount: number,
   type: TransactionType,
   category: TransactionCategory,
@@ -106,7 +278,8 @@ export async function addPersonalTransaction(
 ): Promise<void> {
   const supabase = await createClient()
   const { error } = await supabase.from('personal_transactions').insert({
-    user_id: userId,
+    account_id: accountId,
+    user_id: createdBy,
     amount: encryptField(String(amount)),
     type,
     category: encryptField(category),

@@ -1,7 +1,19 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import type { CategoryBreakdown, PersonalTransaction, TransactionCategory, TransactionType, WalletSummary } from '../types'
+import type {
+  AccessibleWallet,
+  CategoryBreakdown,
+  PersonalAccount,
+  PersonalTransaction,
+  SharePermission,
+  TransactionCategory,
+  TransactionType,
+  WalletMember,
+  WalletSummary,
+} from '../types'
+import ShareWalletPanel from './ShareWalletPanel'
+import WalletSwitcher from './WalletSwitcher'
 
 type ActionResult = { error?: string }
 
@@ -10,6 +22,11 @@ type WalletDashboardProps = {
   transactions: PersonalTransaction[]
   categoryBreakdown: CategoryBreakdown[]
   categories: string[]
+  accessibleWallets: AccessibleWallet[]
+  selectedAccount: PersonalAccount
+  members: WalletMember[]
+  currentUserId: string
+  permission: SharePermission
   onAddTransaction: (
     amount: number,
     type: TransactionType,
@@ -17,6 +34,8 @@ type WalletDashboardProps = {
     description: string,
   ) => Promise<ActionResult>
   onAddCategory: (name: string) => Promise<ActionResult>
+  onShareWallet: (email: string, permission: SharePermission) => Promise<ActionResult>
+  onRevokeShare: (userId: string) => Promise<ActionResult>
 }
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -262,7 +281,7 @@ function QuickAddForm({
   )
 }
 
-function TransactionRow({ tx }: { tx: PersonalTransaction }) {
+function TransactionRow({ tx, showCreator }: { tx: PersonalTransaction; showCreator: boolean }) {
   const isIncome = tx.type === 'income'
 
   return (
@@ -279,6 +298,7 @@ function TransactionRow({ tx }: { tx: PersonalTransaction }) {
           <p className="text-sm font-medium text-ink-primary">{tx.description || categoryLabel(tx.category)}</p>
           <p className="text-xs text-ink-muted">
             {categoryLabel(tx.category)} · {new Date(tx.createdAt).toLocaleDateString('vi-VN')}
+            {showCreator && ` · Tạo bởi ${tx.creatorName ?? 'Không rõ'}`}
           </p>
         </div>
       </div>
@@ -295,21 +315,49 @@ export default function WalletDashboard({
   transactions,
   categoryBreakdown,
   categories,
+  accessibleWallets,
+  selectedAccount,
+  members,
+  currentUserId,
+  permission,
   onAddTransaction,
   onAddCategory,
+  onShareWallet,
+  onRevokeShare,
 }: WalletDashboardProps) {
+  const isOwner = selectedAccount.ownerId === currentUserId
+  const canEdit = permission === 'edit'
+  const showCreator = members.length > 1
+
   return (
     <div className="mx-auto max-w-4xl space-y-6 px-4 py-8 sm:px-6">
-      <div className="mb-6">
-        <h1 className="font-orbitron text-2xl font-bold text-ink-primary">My Wallet</h1>
-        <p className="mt-1 text-sm text-ink-secondary">Theo dõi thu chi cá nhân của bạn</p>
+      <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="font-orbitron text-2xl font-bold text-ink-primary">{selectedAccount.name}</h1>
+          <p className="mt-1 text-sm text-ink-secondary">Theo dõi thu chi cá nhân của bạn</p>
+        </div>
+        <WalletSwitcher wallets={accessibleWallets} selectedAccountId={selectedAccount.id} />
       </div>
 
       <SummaryGrid summary={summary} />
 
       <CategoryBreakdownCard breakdown={categoryBreakdown} />
 
-      <QuickAddForm categories={categories} onAdd={onAddTransaction} onAddCategory={onAddCategory} />
+      <ShareWalletPanel
+        members={members}
+        currentUserId={currentUserId}
+        isOwner={isOwner}
+        onShareWallet={onShareWallet}
+        onRevokeShare={onRevokeShare}
+      />
+
+      {canEdit ? (
+        <QuickAddForm categories={categories} onAdd={onAddTransaction} onAddCategory={onAddCategory} />
+      ) : (
+        <div className="rounded-xl border border-surface-border bg-surface-card p-6 text-center shadow-card">
+          <p className="text-sm text-ink-muted">Bạn chỉ có quyền xem ví này.</p>
+        </div>
+      )}
 
       <div className="rounded-xl border border-surface-border bg-surface-card shadow-card">
         <div className="border-b border-surface-border px-6 py-4">
@@ -320,7 +368,7 @@ export default function WalletDashboard({
         ) : (
           <div className="divide-y divide-surface-border">
             {transactions.map(tx => (
-              <TransactionRow key={tx.id} tx={tx} />
+              <TransactionRow key={tx.id} tx={tx} showCreator={showCreator} />
             ))}
           </div>
         )}

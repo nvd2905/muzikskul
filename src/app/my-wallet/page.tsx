@@ -3,33 +3,59 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/supabase/server'
 import { getCurrentUser } from '@/modules/auth/actions'
 import {
+  ensureDefaultAccount,
+  getAccessibleWallets,
   getPersonalTransactions,
   getWalletSummary,
   getCategoryBreakdown,
   getUserCategories,
+  getWalletMembers,
+  getWalletAccess,
   addUserCategory,
   addPersonalTransaction,
+  inviteUserToWallet,
+  revokeWalletShare,
   TRANSACTION_CATEGORIES,
+  type SharePermission,
   type TransactionCategory,
   type TransactionType,
 } from '@/modules/wallet/services'
 import WalletDashboard from '@/modules/wallet/components/WalletDashboard'
 import Navbar from '@/shared/components/Navbar'
 
-export default async function MyWalletPage() {
+export default async function MyWalletPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ wallet?: string }>
+}) {
   const user = await getCurrentUser()
 
   if (!user) redirect('/login')
 
-  const [summary, transactions, categoryBreakdown, customCategories] = await Promise.all([
-    getWalletSummary(user.id),
-    getPersonalTransactions(user.id),
-    getCategoryBreakdown(user.id),
-    getUserCategories(user.id),
+  const [defaultAccount, accessibleWallets] = await Promise.all([
+    ensureDefaultAccount(user.id),
+    getAccessibleWallets(user.id),
+  ])
+
+  const { wallet: requestedAccountId } = await searchParams
+  const selectedWallet =
+    accessibleWallets.find(w => w.account.id === requestedAccountId) ??
+    accessibleWallets.find(w => w.account.id === defaultAccount.id) ??
+    accessibleWallets[0]
+  const selectedAccount = selectedWallet.account
+  const permission = selectedWallet.permission
+
+  const [summary, transactions, categoryBreakdown, customCategories, members] = await Promise.all([
+    getWalletSummary(selectedAccount.id),
+    getPersonalTransactions(selectedAccount.id),
+    getCategoryBreakdown(selectedAccount.id),
+    getUserCategories(selectedAccount.id),
+    getWalletMembers(selectedAccount.id),
   ])
   const categories = [...TRANSACTION_CATEGORIES, ...customCategories]
 
   async function handleAddTransaction(
+    accountId: string,
     amount: number,
     type: TransactionType,
     category: TransactionCategory,
@@ -43,6 +69,9 @@ export default async function MyWalletPage() {
       } = await supabase.auth.getUser()
       if (!user) throw new Error('Unauthorized')
 
+      const wallet = await getWalletAccess(accountId, user.id)
+      if (!wallet || wallet.permission !== 'edit') return { error: 'Bạn không có quyền chỉnh sửa ví này.' }
+
       if (!Number.isFinite(amount) || amount <= 0) {
         return { error: 'Số tiền không hợp lệ.' }
       }
@@ -50,12 +79,12 @@ export default async function MyWalletPage() {
         return { error: 'Loại giao dịch không hợp lệ.' }
       }
 
-      const customCategories = await getUserCategories(user.id)
+      const customCategories = await getUserCategories(accountId)
       if (![...TRANSACTION_CATEGORIES, ...customCategories].includes(category)) {
         return { error: 'Danh mục không hợp lệ.' }
       }
 
-      await addPersonalTransaction(user.id, amount, type, category, description.trim() || null)
+      await addPersonalTransaction(accountId, user.id, amount, type, category, description.trim() || null)
       revalidatePath('/my-wallet')
       return {}
     } catch {
@@ -63,7 +92,7 @@ export default async function MyWalletPage() {
     }
   }
 
-  async function handleAddCategory(name: string): Promise<{ error?: string }> {
+  async function handleAddCategory(accountId: string, name: string): Promise<{ error?: string }> {
     'use server'
     try {
       const supabase = await createClient()
@@ -71,6 +100,9 @@ export default async function MyWalletPage() {
         data: { user },
       } = await supabase.auth.getUser()
       if (!user) throw new Error('Unauthorized')
+
+      const wallet = await getWalletAccess(accountId, user.id)
+      if (!wallet || wallet.permission !== 'edit') return { error: 'Bạn không có quyền chỉnh sửa ví này.' }
 
       const trimmed = name.trim()
       if (!trimmed) {
@@ -80,13 +112,59 @@ export default async function MyWalletPage() {
         return { error: 'Tên danh mục tối đa 30 ký tự.' }
       }
 
-      const customCategories = await getUserCategories(user.id)
+      const customCategories = await getUserCategories(accountId)
       const allCategories = [...TRANSACTION_CATEGORIES, ...customCategories]
       if (allCategories.some(c => c.toLowerCase() === trimmed.toLowerCase())) {
         return { error: 'Danh mục này đã tồn tại.' }
       }
 
-      await addUserCategory(user.id, trimmed, allCategories)
+      await addUserCategory(accountId, user.id, trimmed, allCategories)
+      revalidatePath('/my-wallet')
+      return {}
+    } catch {
+      return { error: 'Đã có lỗi xảy ra, vui lòng thử lại.' }
+    }
+  }
+
+  async function handleShareWallet(
+    accountId: string,
+    email: string,
+    permission: SharePermission,
+  ): Promise<{ error?: string }> {
+    'use server'
+    try {
+      const supabase = await createClient()
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (!user) throw new Error('Unauthorized')
+
+      const wallet = await getWalletAccess(accountId, user.id)
+      if (!wallet || wallet.role !== 'owner') return { error: 'Chỉ chủ sở hữu mới có thể mời thành viên.' }
+
+      const result = await inviteUserToWallet(accountId, email, permission)
+      if (result.error) return result
+
+      revalidatePath('/my-wallet')
+      return {}
+    } catch {
+      return { error: 'Đã có lỗi xảy ra, vui lòng thử lại.' }
+    }
+  }
+
+  async function handleRevokeShare(accountId: string, sharedWithUserId: string): Promise<{ error?: string }> {
+    'use server'
+    try {
+      const supabase = await createClient()
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (!user) throw new Error('Unauthorized')
+
+      const wallet = await getWalletAccess(accountId, user.id)
+      if (!wallet || wallet.role !== 'owner') return { error: 'Chỉ chủ sở hữu mới có thể thu hồi quyền truy cập.' }
+
+      await revokeWalletShare(accountId, sharedWithUserId)
       revalidatePath('/my-wallet')
       return {}
     } catch {
@@ -102,8 +180,15 @@ export default async function MyWalletPage() {
         transactions={transactions}
         categoryBreakdown={categoryBreakdown}
         categories={categories}
-        onAddTransaction={handleAddTransaction}
-        onAddCategory={handleAddCategory}
+        accessibleWallets={accessibleWallets}
+        selectedAccount={selectedAccount}
+        members={members}
+        currentUserId={user.id}
+        permission={permission}
+        onAddTransaction={handleAddTransaction.bind(null, selectedAccount.id)}
+        onAddCategory={handleAddCategory.bind(null, selectedAccount.id)}
+        onShareWallet={handleShareWallet.bind(null, selectedAccount.id)}
+        onRevokeShare={handleRevokeShare.bind(null, selectedAccount.id)}
       />
     </main>
   )
