@@ -1,33 +1,35 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import {
-  TRANSACTION_CATEGORIES,
-  type PersonalTransaction,
-  type TransactionCategory,
-  type TransactionType,
-  type WalletSummary,
-} from '../types'
+import type { CategoryBreakdown, PersonalTransaction, TransactionCategory, TransactionType, WalletSummary } from '../types'
 
 type ActionResult = { error?: string }
 
 type WalletDashboardProps = {
   summary: WalletSummary
   transactions: PersonalTransaction[]
+  categoryBreakdown: CategoryBreakdown[]
+  categories: string[]
   onAddTransaction: (
     amount: number,
     type: TransactionType,
     category: TransactionCategory,
     description: string,
   ) => Promise<ActionResult>
+  onAddCategory: (name: string) => Promise<ActionResult>
 }
 
-const CATEGORY_LABELS: Record<TransactionCategory, string> = {
+const CATEGORY_LABELS: Record<string, string> = {
   Food: 'Ăn uống',
   Study: 'Học tập',
   Transport: 'Di chuyển',
   Entertainment: 'Giải trí',
   Others: 'Khác',
+}
+
+// Custom, user-added categories have no built-in translation — show them as-is.
+function categoryLabel(category: string) {
+  return CATEGORY_LABELS[category] ?? category
 }
 
 function formatVND(amount: number) {
@@ -65,13 +67,53 @@ function SummaryGrid({ summary }: { summary: WalletSummary }) {
   )
 }
 
-function QuickAddForm({ onAdd }: { onAdd: WalletDashboardProps['onAddTransaction'] }) {
+function CategoryBreakdownCard({ breakdown }: { breakdown: CategoryBreakdown[] }) {
+  if (breakdown.length === 0) return null
+
+  return (
+    <div className="rounded-xl border border-surface-border bg-surface-card p-6 shadow-card">
+      <h3 className="mb-4 text-base font-semibold text-ink-primary">Chi tiêu theo danh mục</h3>
+      <div className="space-y-3">
+        {breakdown.map(item => (
+          <div key={item.category}>
+            <div className="mb-1 flex items-center justify-between text-sm">
+              <span className="font-medium text-ink-primary">{categoryLabel(item.category)}</span>
+              <span className="font-jetbrains text-ink-secondary">{formatVND(item.total)}</span>
+            </div>
+            <div className="h-2 w-full overflow-hidden rounded-full bg-surface-elevated">
+              <div
+                className="h-full rounded-full bg-brand transition-all duration-700"
+                style={{ width: `${item.percentage}%` }}
+              />
+            </div>
+            <p className="mt-0.5 text-right font-jetbrains text-xs text-ink-muted">{item.percentage.toFixed(1)}%</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function QuickAddForm({
+  categories,
+  onAdd,
+  onAddCategory,
+}: {
+  categories: string[]
+  onAdd: WalletDashboardProps['onAddTransaction']
+  onAddCategory: WalletDashboardProps['onAddCategory']
+}) {
   const [type, setType] = useState<TransactionType>('expense')
   const [amount, setAmount] = useState('')
-  const [category, setCategory] = useState<TransactionCategory>('Food')
+  const [category, setCategory] = useState<TransactionCategory>(categories[0] ?? '')
   const [description, setDescription] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
+
+  const [isAddingCategory, setIsAddingCategory] = useState(false)
+  const [newCategoryName, setNewCategoryName] = useState('')
+  const [categoryError, setCategoryError] = useState<string | null>(null)
+  const [isAddingCategoryPending, startAddCategoryTransition] = useTransition()
 
   function handleSubmit(e: React.SyntheticEvent) {
     e.preventDefault()
@@ -89,6 +131,22 @@ function QuickAddForm({ onAdd }: { onAdd: WalletDashboardProps['onAddTransaction
       setError(null)
       setAmount('')
       setDescription('')
+    })
+  }
+
+  function handleAddCategory() {
+    const trimmed = newCategoryName.trim()
+    if (!trimmed) return
+    startAddCategoryTransition(async () => {
+      const result = await onAddCategory(trimmed)
+      if (result.error) {
+        setCategoryError(result.error)
+        return
+      }
+      setCategoryError(null)
+      setCategory(trimmed)
+      setNewCategoryName('')
+      setIsAddingCategory(false)
     })
   }
 
@@ -131,16 +189,56 @@ function QuickAddForm({ onAdd }: { onAdd: WalletDashboardProps['onAddTransaction
           />
           <select
             value={category}
-            onChange={e => setCategory(e.target.value as TransactionCategory)}
+            onChange={e => setCategory(e.target.value)}
             className={inputClass}
           >
-            {TRANSACTION_CATEGORIES.map(c => (
+            {categories.map(c => (
               <option key={c} value={c}>
-                {CATEGORY_LABELS[c]}
+                {categoryLabel(c)}
               </option>
             ))}
           </select>
         </div>
+
+        {!isAddingCategory ? (
+          <button
+            type="button"
+            onClick={() => setIsAddingCategory(true)}
+            className="text-xs font-medium text-brand-light hover:text-brand"
+          >
+            + Thêm danh mục mới
+          </button>
+        ) : (
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={newCategoryName}
+              onChange={e => setNewCategoryName(e.target.value)}
+              placeholder="Tên danh mục mới"
+              className={`flex-1 ${inputClass}`}
+            />
+            <button
+              type="button"
+              onClick={handleAddCategory}
+              disabled={!newCategoryName.trim() || isAddingCategoryPending}
+              className="rounded-lg bg-brand px-3 py-2 text-xs font-semibold text-ink-primary transition hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {isAddingCategoryPending ? '...' : 'Thêm'}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setIsAddingCategory(false)
+                setNewCategoryName('')
+                setCategoryError(null)
+              }}
+              className="rounded-lg border border-surface-border px-3 py-2 text-xs font-semibold text-ink-secondary transition hover:border-brand hover:text-brand-light"
+            >
+              Huỷ
+            </button>
+          </div>
+        )}
+        {categoryError && <p className="text-xs font-medium text-neon-red">{categoryError}</p>}
 
         <input
           type="text"
@@ -178,9 +276,9 @@ function TransactionRow({ tx }: { tx: PersonalTransaction }) {
           {isIncome ? '+' : '−'}
         </span>
         <div>
-          <p className="text-sm font-medium text-ink-primary">{tx.description || CATEGORY_LABELS[tx.category]}</p>
+          <p className="text-sm font-medium text-ink-primary">{tx.description || categoryLabel(tx.category)}</p>
           <p className="text-xs text-ink-muted">
-            {CATEGORY_LABELS[tx.category]} · {new Date(tx.createdAt).toLocaleDateString('vi-VN')}
+            {categoryLabel(tx.category)} · {new Date(tx.createdAt).toLocaleDateString('vi-VN')}
           </p>
         </div>
       </div>
@@ -192,7 +290,14 @@ function TransactionRow({ tx }: { tx: PersonalTransaction }) {
   )
 }
 
-export default function WalletDashboard({ summary, transactions, onAddTransaction }: WalletDashboardProps) {
+export default function WalletDashboard({
+  summary,
+  transactions,
+  categoryBreakdown,
+  categories,
+  onAddTransaction,
+  onAddCategory,
+}: WalletDashboardProps) {
   return (
     <div className="mx-auto max-w-4xl space-y-6 px-4 py-8 sm:px-6">
       <div className="mb-6">
@@ -202,7 +307,9 @@ export default function WalletDashboard({ summary, transactions, onAddTransactio
 
       <SummaryGrid summary={summary} />
 
-      <QuickAddForm onAdd={onAddTransaction} />
+      <CategoryBreakdownCard breakdown={categoryBreakdown} />
+
+      <QuickAddForm categories={categories} onAdd={onAddTransaction} onAddCategory={onAddCategory} />
 
       <div className="rounded-xl border border-surface-border bg-surface-card shadow-card">
         <div className="border-b border-surface-border px-6 py-4">
