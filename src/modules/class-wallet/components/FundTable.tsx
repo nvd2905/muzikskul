@@ -260,7 +260,7 @@ function MomoCard({
           <div className="flex h-36 w-36 items-center justify-center overflow-hidden rounded-xl border border-surface-border bg-surface-elevated">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src="/momo-qr.png"
+              src="/momo-qr.jpg"
               alt="Mã QR Momo"
               width={144}
               height={144}
