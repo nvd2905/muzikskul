@@ -56,13 +56,13 @@ function ChangeCell({ change, pct }: { change: number; pct: number }) {
 
 function SJCHero({ price }: { price: GoldPrice }) {
   return (
-    <div className="rounded-xl border border-surface-border bg-surface-card p-6 shadow-card">
-      <div className="mb-5 flex items-start justify-between">
+    <div className="rounded-xl border border-surface-border bg-surface-card p-4 shadow-card sm:p-6">
+      <div className="mb-5 flex items-start justify-between gap-3">
         <div>
           <p className="text-xs font-semibold uppercase tracking-widest text-ink-muted">Vàng SJC</p>
           <p className="mt-0.5 text-xs text-ink-muted">Cập nhật: {price.dateTime}</p>
         </div>
-        <span className="flex items-center gap-1.5 rounded-full bg-neon-green/10 px-3 py-1 text-xs font-semibold text-neon-green">
+        <span className="flex shrink-0 items-center gap-1.5 rounded-full bg-neon-green/10 px-3 py-1 text-xs font-semibold text-neon-green">
           <span className="relative flex h-2 w-2">
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-neon-green opacity-75" />
             <span className="relative inline-flex h-2 w-2 rounded-full bg-neon-green" />
@@ -71,7 +71,7 @@ function SJCHero({ price }: { price: GoldPrice }) {
         </span>
       </div>
 
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid grid-cols-2 gap-4 sm:gap-6">
         <div>
           <p className="mb-1 text-xs font-medium text-ink-muted">Mua vào</p>
           <p className="font-jetbrains text-2xl font-bold text-accent sm:text-3xl">
@@ -201,7 +201,7 @@ function SJCSparkline({ data }: { data: GoldPricePoint[] }) {
 function AllPricesTable({ prices }: { prices: GoldPrice[] }) {
   return (
     <div className="rounded-xl border border-surface-border bg-surface-card shadow-card">
-      <div className="border-b border-surface-border px-6 py-4">
+      <div className="border-b border-surface-border px-4 py-4 sm:px-6">
         <h3 className="text-base font-semibold text-ink-primary">Bảng giá trong nước</h3>
         <p className="mt-0.5 text-xs text-ink-muted">Đơn vị: VNĐ / chỉ (3,75g)</p>
       </div>
@@ -209,17 +209,17 @@ function AllPricesTable({ prices }: { prices: GoldPrice[] }) {
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-surface-elevated text-left text-xs font-semibold uppercase tracking-wide text-ink-muted">
-              <th className="px-6 py-3">Loại vàng</th>
-              <th className="px-6 py-3">Mua vào</th>
-              <th className="px-6 py-3">Bán ra</th>
-              <th className="px-6 py-3">Thay đổi (bán)</th>
-              <th className="px-6 py-3 text-right">Cập nhật</th>
+              <th className="px-4 py-3 sm:px-6">Loại vàng</th>
+              <th className="px-4 py-3 sm:px-6">Mua vào</th>
+              <th className="px-4 py-3 sm:px-6">Bán ra</th>
+              <th className="px-4 py-3 sm:px-6">Thay đổi (bán)</th>
+              <th className="px-4 py-3 text-right sm:px-6">Cập nhật</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-surface-border">
             {prices.map(p => (
               <tr key={p.code} className="transition-colors hover:bg-surface-elevated">
-                <td className="px-6 py-4">
+                <td className="px-4 py-4 sm:px-6">
                   <span className="font-semibold text-ink-primary">
                     {GOLD_LABELS[p.code] ?? p.code}
                   </span>
@@ -229,16 +229,16 @@ function AllPricesTable({ prices }: { prices: GoldPrice[] }) {
                     </span>
                   )}
                 </td>
-                <td className="px-6 py-4 font-jetbrains font-semibold text-accent">
+                <td className="px-4 py-4 font-jetbrains font-semibold text-accent sm:px-6">
                   {formatVND(p.buyingPrice)}
                 </td>
-                <td className="px-6 py-4 font-jetbrains font-semibold text-brand-light">
+                <td className="px-4 py-4 font-jetbrains font-semibold text-brand-light sm:px-6">
                   {formatVND(p.sellingPrice)}
                 </td>
-                <td className="px-6 py-4">
+                <td className="px-4 py-4 sm:px-6">
                   <ChangeCell change={p.sellChange} pct={p.sellChangePercent} />
                 </td>
-                <td className="px-6 py-4 text-right font-jetbrains text-xs text-ink-muted">
+                <td className="px-4 py-4 text-right font-jetbrains text-xs text-ink-muted sm:px-6">
                   {p.dateTime.split(' ')[1]}
                 </td>
               </tr>
@@ -280,7 +280,7 @@ export default function GoldPriceDashboard({ prices, history, user, onSignIn }: 
 
   return (
     <div className="mx-auto max-w-4xl space-y-6 px-4 py-8 sm:px-6">
-      <div className="flex items-start justify-between">
+      <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="font-orbitron text-2xl font-bold text-ink-primary">Giá vàng trong nước</h1>
           <p className="mt-1 text-sm text-ink-secondary">Dữ liệu từ mihong.vn — tự động làm mới mỗi 60 giây</p>
@@ -288,7 +288,7 @@ export default function GoldPriceDashboard({ prices, history, user, onSignIn }: 
         <button
           onClick={handleRefresh}
           disabled={isPending}
-          className="rounded-lg border border-surface-border px-3 py-1.5 text-xs font-medium text-ink-secondary transition hover:border-brand hover:text-brand-light disabled:cursor-not-allowed disabled:opacity-50"
+          className="shrink-0 rounded-lg border border-surface-border px-3 py-1.5 text-xs font-medium text-ink-secondary transition hover:border-brand hover:text-brand-light disabled:cursor-not-allowed disabled:opacity-50"
         >
           {isPending ? 'Đang tải...' : '↻ Làm mới'}
         </button>
@@ -329,8 +329,8 @@ export default function GoldPriceDashboard({ prices, history, user, onSignIn }: 
       <AllPricesTable prices={prices} />
 
       <div className="rounded-xl border border-surface-border bg-surface-card shadow-card">
-        <div className="border-b border-surface-border px-6 py-4">
-          <div className="flex items-center justify-between">
+        <div className="border-b border-surface-border px-4 py-4 sm:px-6">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <h3 className="text-base font-semibold text-ink-primary">SJC — Biến động 24h</h3>
             <div className="flex items-center gap-4 text-xs text-ink-muted">
               <span className="flex items-center gap-1.5">
@@ -342,7 +342,7 @@ export default function GoldPriceDashboard({ prices, history, user, onSignIn }: 
             </div>
           </div>
         </div>
-        <div className="px-4 py-4">
+        <div className="px-3 py-4 sm:px-4">
           <SJCSparkline data={history} />
         </div>
       </div>
@@ -350,16 +350,16 @@ export default function GoldPriceDashboard({ prices, history, user, onSignIn }: 
       {/* Discord login modal */}
       {showLoginModal && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
           onClick={() => setShowLoginModal(false)}
         >
           <div
-            className="relative mx-4 w-full max-w-sm rounded-2xl border border-surface-border bg-surface-card p-8 shadow-card"
+            className="relative w-full max-w-sm max-h-[90vh] overflow-y-auto rounded-2xl border border-surface-border bg-surface-card p-6 shadow-card sm:p-8"
             onClick={e => e.stopPropagation()}
           >
             <button
               onClick={() => setShowLoginModal(false)}
-              className="absolute right-4 top-4 flex h-7 w-7 items-center justify-center rounded-lg text-ink-muted transition hover:bg-surface-elevated hover:text-ink-primary"
+              className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-lg text-ink-muted transition hover:bg-surface-elevated hover:text-ink-primary"
               aria-label="Đóng"
             >
               ✕

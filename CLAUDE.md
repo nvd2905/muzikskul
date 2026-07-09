@@ -65,7 +65,7 @@ Server Actions for data mutations are defined inline in `page.tsx`. The exceptio
 Runs on every non-static request. Responsibilities:
 1. Refreshes the Supabase session cookie (must happen on every request via `createServerClient` + `setAll`).
 2. Redirects unauthenticated users hitting `/class-wallet`, `/my-wallet`, or `/muzik` to `/login`.
-3. Redirects authenticated users hitting `/login` to `/class-wallet`.
+3. Redirects authenticated users hitting `/login` to `/` (home).
 
 Protected path prefixes live in `PROTECTED_PREFIXES` in `src/middleware.ts` — add new ones there.
 
@@ -78,10 +78,10 @@ The matcher excludes `/auth/callback` so the OAuth code-exchange route can set t
   └── LoginButton (form actions) → signInWithDiscord() / signInWithGoogle() server action
         └── supabase.auth.signInWithOAuth → redirect to Discord / Google
               └── provider → /auth/callback?code=...
-                    └── exchangeCodeForSession → redirect to /class-wallet
+                    └── exchangeCodeForSession → redirect to `next` query param, default `/`
 ```
 
-The `redirectTo` URL in `signInWithDiscord`/`signInWithGoogle` is constructed from request headers (`x-forwarded-proto` + `host`) so it works in both local dev and production without a hardcoded env var. Both actions share the same `/auth/callback` route.
+The `redirectTo` URL in `signInWithDiscord`/`signInWithGoogle` is constructed from request headers (`x-forwarded-proto` + `host`) so it works in both local dev and production without a hardcoded env var. Both actions share the same `/auth/callback` route. `/auth/callback` (`src/app/auth/callback/route.ts`) reads an optional `?next=` query param and redirects there after exchanging the code; when absent it redirects to `/` (home) — pages that want the user back on themselves after a login detour (e.g. `gold-price/page.tsx`'s own sign-in action) pass `next` explicitly.
 
 Both the Supabase dashboard (Authentication → URL Configuration) and each provider's developer console (Discord Developer Portal → OAuth2 → Redirects; Google Cloud Console → APIs & Services → Credentials → Authorized redirect URIs) must have `http://localhost:3000/auth/callback` in their allowlists for local development, plus the production callback URL for the deployed domain.
 

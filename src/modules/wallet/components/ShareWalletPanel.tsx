@@ -119,7 +119,7 @@ export default function ShareWalletPanel({
   }
 
   return (
-    <div className="rounded-xl border border-surface-border bg-surface-card p-6 shadow-card">
+    <div className="rounded-xl border border-surface-border bg-surface-card p-4 shadow-card sm:p-6">
       <button
         type="button"
         onClick={() => setIsOpen(prev => !prev)}

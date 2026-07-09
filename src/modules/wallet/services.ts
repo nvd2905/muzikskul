@@ -2,7 +2,12 @@ import { createClient } from '@/supabase/server'
 import { decryptField, encryptField } from './crypto'
 import type {
   AccessibleWallet,
+  AnalyticsSummary,
+  BudgetLimit,
   CategoryBreakdown,
+  MonthlyTotals,
+  PaymentAccount,
+  PaymentAccountType,
   PersonalAccount,
   PersonalTransaction,
   SharePermission,
@@ -313,4 +318,157 @@ export async function renameAccount(accountId: string, name: string): Promise<vo
   const supabase = await createClient()
   const { error } = await supabase.from('personal_accounts').update({ name }).eq('id', accountId)
   if (error) throw error
+}
+
+export async function getPaymentAccounts(accountId: string): Promise<PaymentAccount[]> {
+  const supabase = await createClient()
+  const [{ data: accounts, error: accountsError }, { data: txns, error: txnsError }] = await Promise.all([
+    supabase
+      .from('personal_payment_accounts')
+      .select('id, name, type')
+      .eq('account_id', accountId)
+      .order('created_at', { ascending: true }),
+    supabase
+      .from('personal_transactions')
+      .select('amount, type, payment_account_id')
+      .eq('account_id', accountId)
+      .not('payment_account_id', 'is', null),
+  ])
+  if (accountsError) throw accountsError
+  if (txnsError) throw txnsError
+
+  const balanceById = new Map<string, number>()
+  for (const row of txns ?? []) {
+    if (!row.payment_account_id) continue
+    const amount = Number(decryptField(row.amount))
+    const delta = row.type === 'income' ? amount : -amount
+    balanceById.set(row.payment_account_id, (balanceById.get(row.payment_account_id) ?? 0) + delta)
+  }
+
+  return (accounts ?? []).map(row => ({
+    id: row.id,
+    name: row.name,
+    type: row.type as PaymentAccountType,
+    balance: balanceById.get(row.id) ?? 0,
+  }))
+}
+
+export async function createPaymentAccount(
+  accountId: string,
+  createdBy: string,
+  name: string,
+  type: PaymentAccountType,
+): Promise<void> {
+  const supabase = await createClient()
+  const { error } = await supabase.from('personal_payment_accounts').insert({
+    account_id: accountId,
+    created_by: createdBy,
+    name,
+    type,
+  })
+  if (error) throw error
+}
+
+export async function getBudgetLimits(accountId: string): Promise<BudgetLimit[]> {
+  const supabase = await createClient()
+  const [{ data, error }, breakdown] = await Promise.all([
+    supabase.from('budget_limits').select('id, category, limit_amount').eq('account_id', accountId),
+    getCategoryBreakdown(accountId),
+  ])
+  if (error) throw error
+
+  const spentByCategory = new Map(breakdown.map(item => [item.category, item.total]))
+
+  return (data ?? []).map(row => {
+    const category = decryptField(row.category) as TransactionCategory
+    const limitAmount = Number(decryptField(row.limit_amount))
+    const spent = spentByCategory.get(category) ?? 0
+    return {
+      id: row.id,
+      category,
+      limitAmount,
+      spent,
+      percentage: limitAmount > 0 ? (spent / limitAmount) * 100 : 0,
+    }
+  })
+}
+
+export async function setBudgetLimit(
+  accountId: string,
+  createdBy: string,
+  category: TransactionCategory,
+  limitAmount: number,
+): Promise<void> {
+  const supabase = await createClient()
+  const { data: existing, error: existingError } = await supabase
+    .from('budget_limits')
+    .select('id, category')
+    .eq('account_id', accountId)
+  if (existingError) throw existingError
+
+  const match = (existing ?? []).find(row => decryptField(row.category) === category)
+
+  if (match) {
+    const { error } = await supabase
+      .from('budget_limits')
+      .update({ limit_amount: encryptField(String(limitAmount)), updated_at: new Date().toISOString() })
+      .eq('id', match.id)
+    if (error) throw error
+    return
+  }
+
+  const { error } = await supabase.from('budget_limits').insert({
+    account_id: accountId,
+    created_by: createdBy,
+    category: encryptField(category),
+    limit_amount: encryptField(String(limitAmount)),
+  })
+  if (error) throw error
+}
+
+function monthRange(date: Date) {
+  const start = new Date(date.getFullYear(), date.getMonth(), 1)
+  const end = new Date(date.getFullYear(), date.getMonth() + 1, 1)
+  return { start, end }
+}
+
+function monthLabel(date: Date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+}
+
+function monthlyChangePercentage(current: number, previous: number): number | null {
+  if (previous === 0) return current === 0 ? 0 : null
+  return ((current - previous) / previous) * 100
+}
+
+export async function getMonthlyAnalytics(accountId: string): Promise<AnalyticsSummary> {
+  const supabase = await createClient()
+  const now = new Date()
+  const currentRange = monthRange(now)
+  const previousMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+
+  const { data, error } = await supabase
+    .from('personal_transactions')
+    .select('amount, type, created_at')
+    .eq('account_id', accountId)
+    .gte('created_at', monthRange(previousMonthDate).start.toISOString())
+    .lt('created_at', currentRange.end.toISOString())
+  if (error) throw error
+
+  const current: MonthlyTotals = { month: monthLabel(now), income: 0, expense: 0 }
+  const previous: MonthlyTotals = { month: monthLabel(previousMonthDate), income: 0, expense: 0 }
+
+  for (const row of data ?? []) {
+    const amount = Number(decryptField(row.amount))
+    const bucket = new Date(row.created_at) >= currentRange.start ? current : previous
+    if (row.type === 'income') bucket.income += amount
+    else bucket.expense += amount
+  }
+
+  return {
+    current,
+    previous,
+    incomeChangePercentage: monthlyChangePercentage(current.income, previous.income),
+    expenseChangePercentage: monthlyChangePercentage(current.expense, previous.expense),
+  }
 }

@@ -6,8 +6,8 @@ export default function LoginPage({
   searchParams: Promise<{ error?: string }>
 }) {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-surface-base">
-      <div className="w-full max-w-sm rounded-2xl border border-surface-border bg-surface-card p-8 shadow-card">
+    <main className="flex min-h-screen items-center justify-center bg-surface-base p-4">
+      <div className="w-full max-w-sm rounded-2xl border border-surface-border bg-surface-card p-6 shadow-card sm:p-8">
         <div className="mb-8 text-center">
           <h1 className="font-orbitron text-2xl font-bold text-ink-primary">Muzikskul</h1>
           <p className="mt-2 text-sm text-ink-secondary">Sign in to continue</p>

@@ -41,9 +41,9 @@ export async function middleware(request: NextRequest) {
   }
 
   if (pathname === '/login' && user) {
-    const dashboardUrl = request.nextUrl.clone()
-    dashboardUrl.pathname = '/class-wallet'
-    return NextResponse.redirect(dashboardUrl)
+    const homeUrl = request.nextUrl.clone()
+    homeUrl.pathname = '/'
+    return NextResponse.redirect(homeUrl)
   }
 
   return supabaseResponse

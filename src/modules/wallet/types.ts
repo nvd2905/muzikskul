@@ -56,3 +56,33 @@ export type AccessibleWallet = {
   role: WalletRole
   permission: SharePermission
 }
+
+export type PaymentAccountType = 'cash' | 'bank' | 'other'
+
+export type PaymentAccount = {
+  id: string
+  name: string
+  type: PaymentAccountType
+  balance: number
+}
+
+export type BudgetLimit = {
+  id: string
+  category: TransactionCategory
+  limitAmount: number
+  spent: number
+  percentage: number
+}
+
+export type MonthlyTotals = {
+  month: string
+  income: number
+  expense: number
+}
+
+export type AnalyticsSummary = {
+  current: MonthlyTotals
+  previous: MonthlyTotals
+  incomeChangePercentage: number | null
+  expenseChangePercentage: number | null
+}

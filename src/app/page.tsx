@@ -3,7 +3,6 @@ import Navbar from '@/shared/components/Navbar'
 import WaveformCanvas from '@/shared/components/WaveformCanvas'
 import FeatureSuggestion from '@/shared/components/FeatureSuggestion'
 import { getCurrentUser } from '@/modules/auth/actions'
-import { signInWithDiscord } from '@/modules/auth/actions'
 
 export default async function LandingPage() {
   const user = await getCurrentUser()
@@ -47,7 +46,7 @@ export default async function LandingPage() {
           }}
         />
 
-        <div className="relative mx-auto grid max-w-[1180px] grid-cols-1 items-center gap-16 px-6 py-20 lg:min-h-[calc(100vh-56px)] lg:grid-cols-[1fr_420px] lg:px-8">
+        <div className="relative mx-auto grid max-w-[1180px] grid-cols-1 items-center gap-10 px-4 py-14 sm:gap-12 sm:px-6 sm:py-20 lg:min-h-[calc(100vh-56px)] lg:grid-cols-[1fr_420px] lg:gap-16 lg:px-8">
 
           {/* Left: copy */}
           <div className="order-2 lg:order-1">
@@ -74,15 +73,12 @@ export default async function LandingPage() {
             </p>
 
             <div className="flex flex-wrap gap-3">
-              <form action={signInWithDiscord}>
-                <button
-                  type="submit"
-                  className="flex cursor-pointer items-center gap-2.5 rounded-[0.65rem] bg-brand px-6 py-3 text-[0.88rem] font-semibold text-ink-primary shadow-brand-glow transition-all duration-200 hover:bg-brand-dark focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2 focus:ring-offset-surface-base active:scale-[0.97]"
-                >
-                  <DiscordIcon />
-                  Get Started with Discord
-                </button>
-              </form>
+              <Link
+                href={user ? '/class-wallet' : '/login'}
+                className="flex items-center gap-2.5 rounded-[0.65rem] bg-brand px-6 py-3 text-[0.88rem] font-semibold text-ink-primary shadow-brand-glow transition-all duration-200 hover:bg-brand-dark focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2 focus:ring-offset-surface-base active:scale-[0.97]"
+              >
+                Get Started →
+              </Link>
               <a
                 href="#ecosystem"
                 className="flex items-center rounded-[0.65rem] border border-surface-border bg-transparent px-6 py-3 text-[0.88rem] font-semibold text-ink-secondary transition-all duration-200 hover:border-brand hover:bg-surface-elevated hover:text-brand-light"
@@ -129,7 +125,7 @@ export default async function LandingPage() {
       </section>
 
       {/* ── ECOSYSTEM GRID ──────────────────────────────────────────── */}
-      <section id="ecosystem" className="relative px-6 py-28 lg:px-8">
+      <section id="ecosystem" className="relative px-4 py-20 sm:px-6 sm:py-24 lg:px-8 lg:py-28">
         <SectionDivider color="rgba(6,182,212,0.18)" />
 
         <div className="mx-auto max-w-[1100px]">
@@ -148,7 +144,7 @@ export default async function LandingPage() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 md:grid-cols-3">
             <EcosystemCard
               color="#06b6d4"
               glowRgb="6,182,212"
@@ -196,7 +192,7 @@ export default async function LandingPage() {
       </section>
 
       {/* ── FUTURE LAB ──────────────────────────────────────────────── */}
-      <section className="relative px-6 py-28 lg:px-8">
+      <section className="relative px-4 py-20 sm:px-6 sm:py-24 lg:px-8 lg:py-28">
         <SectionDivider color="rgba(124,58,237,0.18)" />
         {/* Ambient background */}
         <div
@@ -225,7 +221,7 @@ export default async function LandingPage() {
           </div>
 
           {/* Placeholder cards */}
-          <div className="mb-14 grid grid-cols-1 gap-5 sm:grid-cols-3">
+          <div className="mb-14 grid grid-cols-1 gap-5 sm:grid-cols-2 md:grid-cols-3">
             <FutureCard hint="Feature Loading..." delay="0s" />
             <FutureCard hint="Coming Soon..." delay="0.15s" />
             <FutureCard hint="In Development" delay="0.3s" />
@@ -237,7 +233,7 @@ export default async function LandingPage() {
       </section>
 
       {/* ── FOOTER ──────────────────────────────────────────────────── */}
-      <footer className="border-t border-surface-border bg-surface-base px-6 py-12 lg:px-8">
+      <footer className="border-t border-surface-border bg-surface-base px-4 py-12 sm:px-6 lg:px-8">
         <div className="mx-auto flex max-w-[1100px] flex-wrap items-center justify-between gap-6">
           <div>
             <p className="font-orbitron text-[0.72rem] font-bold uppercase tracking-[0.2em] text-ink-primary">
@@ -303,7 +299,7 @@ type EcosystemCardProps = {
 function EcosystemCard({ color, glowRgb, icon, tag, title, features, href }: EcosystemCardProps) {
   return (
     <div
-      className="group relative overflow-hidden rounded-[1.25rem] border border-surface-border p-7 transition-all duration-300 hover:-translate-y-1.5"
+      className="group relative overflow-hidden rounded-[1.25rem] border border-surface-border p-6 transition-all duration-300 hover:-translate-y-1.5 sm:p-7"
       style={{
         background: `linear-gradient(135deg, rgba(${glowRgb},0.06) 0%, rgba(9,9,15,0.95) 55%)`,
       }}
@@ -395,7 +391,7 @@ function EcosystemCard({ color, glowRgb, icon, tag, title, features, href }: Eco
 function FutureCard({ hint, delay }: { hint: string; delay: string }) {
   return (
     <div
-      className="relative overflow-hidden rounded-[1.25rem] p-7"
+      className="relative overflow-hidden rounded-[1.25rem] p-6 sm:p-7"
       style={{
         border: '1.5px dashed rgba(124,58,237,0.2)',
         background: 'rgba(124,58,237,0.025)',
@@ -450,14 +446,6 @@ function FutureCard({ hint, delay }: { hint: string; delay: string }) {
 }
 
 // ── Icons ───────────────────────────────────────────────────────────────────
-
-function DiscordIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-      <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057c.002.022.014.043.031.057a19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03z" />
-    </svg>
-  )
-}
 
 function EntertainmentIcon() {
   return (
