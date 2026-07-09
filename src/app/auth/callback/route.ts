@@ -5,7 +5,7 @@ import { createClient } from '@/supabase/server'
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const code = searchParams.get('code')
-  const next = searchParams.get('next') ?? '/class-wallet'
+  const next = searchParams.get('next') ?? '/'
 
   const headersList = await headers()
   const proto = headersList.get('x-forwarded-proto') ?? 'http'

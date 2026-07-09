@@ -18,7 +18,13 @@ import {
   renameAccount,
   inviteUserToWallet,
   revokeWalletShare,
+  getPaymentAccounts,
+  createPaymentAccount,
+  getBudgetLimits,
+  setBudgetLimit,
+  getMonthlyAnalytics,
   TRANSACTION_CATEGORIES,
+  type PaymentAccountType,
   type SharePermission,
   type TransactionCategory,
   type TransactionType,
@@ -46,13 +52,17 @@ export default async function MyWalletPage({
   const selectedAccount = selectedWallet.account
   const permission = selectedWallet.permission
 
-  const [summary, transactions, categoryBreakdown, customCategories, members] = await Promise.all([
-    getWalletSummary(selectedAccount.id),
-    getPersonalTransactions(selectedAccount.id),
-    getCategoryBreakdown(selectedAccount.id),
-    getUserCategories(selectedAccount.id),
-    getWalletMembers(selectedAccount.id),
-  ])
+  const [summary, transactions, categoryBreakdown, customCategories, members, paymentAccounts, budgetLimits, analytics] =
+    await Promise.all([
+      getWalletSummary(selectedAccount.id),
+      getPersonalTransactions(selectedAccount.id),
+      getCategoryBreakdown(selectedAccount.id),
+      getUserCategories(selectedAccount.id),
+      getWalletMembers(selectedAccount.id),
+      getPaymentAccounts(selectedAccount.id),
+      getBudgetLimits(selectedAccount.id),
+      getMonthlyAnalytics(selectedAccount.id),
+    ])
   const categories = [...TRANSACTION_CATEGORIES, ...customCategories]
 
   async function handleAddTransaction(
@@ -256,6 +266,68 @@ export default async function MyWalletPage({
     }
   }
 
+  async function handleCreatePaymentAccount(
+    accountId: string,
+    name: string,
+    type: PaymentAccountType,
+  ): Promise<{ error?: string }> {
+    'use server'
+    try {
+      const supabase = await createClient()
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (!user) throw new Error('Unauthorized')
+
+      const wallet = await getWalletAccess(accountId, user.id)
+      if (!wallet || wallet.permission !== 'edit') return { error: 'Bạn không có quyền chỉnh sửa ví này.' }
+
+      const trimmed = name.trim()
+      if (!trimmed) return { error: 'Vui lòng nhập tên tài khoản.' }
+      if (trimmed.length > 30) return { error: 'Tên tài khoản tối đa 30 ký tự.' }
+      if (type !== 'cash' && type !== 'bank' && type !== 'other') return { error: 'Loại tài khoản không hợp lệ.' }
+
+      await createPaymentAccount(accountId, user.id, trimmed, type)
+      revalidatePath('/my-wallet')
+      return {}
+    } catch {
+      return { error: 'Đã có lỗi xảy ra, vui lòng thử lại.' }
+    }
+  }
+
+  async function handleSetBudgetLimit(
+    accountId: string,
+    category: TransactionCategory,
+    limitAmount: number,
+  ): Promise<{ error?: string }> {
+    'use server'
+    try {
+      const supabase = await createClient()
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (!user) throw new Error('Unauthorized')
+
+      const wallet = await getWalletAccess(accountId, user.id)
+      if (!wallet || wallet.permission !== 'edit') return { error: 'Bạn không có quyền chỉnh sửa ví này.' }
+
+      if (!Number.isFinite(limitAmount) || limitAmount <= 0) {
+        return { error: 'Hạn mức không hợp lệ.' }
+      }
+
+      const customCategories = await getUserCategories(accountId)
+      if (![...TRANSACTION_CATEGORIES, ...customCategories].includes(category)) {
+        return { error: 'Danh mục không hợp lệ.' }
+      }
+
+      await setBudgetLimit(accountId, user.id, category, limitAmount)
+      revalidatePath('/my-wallet')
+      return {}
+    } catch {
+      return { error: 'Đã có lỗi xảy ra, vui lòng thử lại.' }
+    }
+  }
+
   return (
     <main className="min-h-screen bg-surface-base">
       <Navbar user={user} />
@@ -269,6 +341,11 @@ export default async function MyWalletPage({
         members={members}
         currentUserId={user.id}
         permission={permission}
+        paymentAccounts={paymentAccounts}
+        budgetLimits={budgetLimits}
+        analytics={analytics}
+        onCreatePaymentAccount={handleCreatePaymentAccount.bind(null, selectedAccount.id)}
+        onSetBudgetLimit={handleSetBudgetLimit.bind(null, selectedAccount.id)}
         onAddTransaction={handleAddTransaction.bind(null, selectedAccount.id)}
         onAddCategory={handleAddCategory.bind(null, selectedAccount.id)}
         onUpdateTransaction={handleUpdateTransaction.bind(null, selectedAccount.id)}

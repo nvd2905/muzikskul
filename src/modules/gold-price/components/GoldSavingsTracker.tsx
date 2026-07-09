@@ -336,13 +336,13 @@ export default function GoldSavingsTracker({ prices }: { prices: GoldPrice[] }) 
                 className={`w-40 font-jetbrains ${inputCls}`}
               />
             </div>
-            <div className="flex items-end gap-2">
+            <div className="flex w-full items-end gap-2 sm:w-auto">
               <button onClick={addPurchase} disabled={!newDate || !newChi || !newPrice}
-                className="rounded-lg bg-brand px-4 py-1.5 text-sm font-semibold text-ink-primary transition hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-50">
+                className="flex-1 rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-ink-primary transition hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-50 sm:flex-none sm:py-1.5">
                 Lưu
               </button>
               <button onClick={() => setShowForm(false)}
-                className="rounded-lg border border-surface-border px-4 py-1.5 text-sm text-ink-muted transition hover:border-brand hover:text-brand-light">
+                className="flex-1 rounded-lg border border-surface-border px-4 py-2 text-sm text-ink-muted transition hover:border-brand hover:text-brand-light sm:flex-none sm:py-1.5">
                 Hủy
               </button>
             </div>
@@ -389,13 +389,13 @@ export default function GoldSavingsTracker({ prices }: { prices: GoldPrice[] }) 
                 onChange={e => setEditPrice(formatPriceInput(e.target.value))}
                 className={`w-40 font-jetbrains ${inputCls}`} />
             </div>
-            <div className="flex items-end gap-2">
+            <div className="flex w-full items-end gap-2 sm:w-auto">
               <button onClick={saveEdit} disabled={!editDate || !editChi || !editPrice}
-                className="rounded-lg bg-brand px-4 py-1.5 text-sm font-semibold text-ink-primary transition hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-50">
+                className="flex-1 rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-ink-primary transition hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-50 sm:flex-none sm:py-1.5">
                 Lưu
               </button>
               <button onClick={() => setEditingId(null)}
-                className="rounded-lg border border-surface-border px-4 py-1.5 text-sm text-ink-muted transition hover:border-brand hover:text-brand-light">
+                className="flex-1 rounded-lg border border-surface-border px-4 py-2 text-sm text-ink-muted transition hover:border-brand hover:text-brand-light sm:flex-none sm:py-1.5">
                 Hủy
               </button>
             </div>
@@ -409,66 +409,68 @@ export default function GoldSavingsTracker({ prices }: { prices: GoldPrice[] }) 
           <div className="border-b border-surface-border px-6 py-4">
             <h3 className="text-sm font-semibold text-ink-primary">Lịch sử mua vàng</h3>
           </div>
-          <table className="w-full text-xs">
-            <thead>
-              <tr className="bg-surface-elevated text-left font-semibold uppercase tracking-wide text-ink-muted">
-                <th className="px-3 py-2.5">Ngày</th>
-                <th className="px-3 py-2.5">Loại</th>
-                <th className="px-3 py-2.5">Số chỉ</th>
-                <th className="px-3 py-2.5">Giá mua/chỉ</th>
-                <th className="px-3 py-2.5">Hiện tại</th>
-                <th className="px-3 py-2.5">Lãi / Lỗ</th>
-                <th className="px-3 py-2.5" />
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-surface-border">
-              {purchases.map(p => {
-                const code = p.goldCode ?? 'SJC'
-                const cost = p.chi * p.pricePerChi
-                const cp = getPriceFor(code)
-                const val = cp > 0 ? p.chi * cp : null
-                const gain = val !== null ? val - cost : null
-                const gainPct = gain !== null && cost > 0 ? (gain / cost) * 100 : null
-                const isActive = editingId === p.id
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="bg-surface-elevated text-left font-semibold uppercase tracking-wide text-ink-muted">
+                  <th className="px-3 py-2.5">Ngày</th>
+                  <th className="px-3 py-2.5">Loại</th>
+                  <th className="px-3 py-2.5">Số chỉ</th>
+                  <th className="px-3 py-2.5">Giá mua/chỉ</th>
+                  <th className="px-3 py-2.5">Hiện tại</th>
+                  <th className="px-3 py-2.5">Lãi / Lỗ</th>
+                  <th className="px-3 py-2.5" />
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-surface-border">
+                {purchases.map(p => {
+                  const code = p.goldCode ?? 'SJC'
+                  const cost = p.chi * p.pricePerChi
+                  const cp = getPriceFor(code)
+                  const val = cp > 0 ? p.chi * cp : null
+                  const gain = val !== null ? val - cost : null
+                  const gainPct = gain !== null && cost > 0 ? (gain / cost) * 100 : null
+                  const isActive = editingId === p.id
 
-                return (
-                  <tr key={p.id} className={`transition-colors ${isActive ? 'bg-accent/5 ring-1 ring-inset ring-accent/20' : 'hover:bg-surface-elevated'}`}>
-                    <td className="px-3 py-3 font-jetbrains text-ink-muted">{formatDate(p.date)}</td>
-                    <td className="px-3 py-3">
-                      <span className="rounded bg-surface-elevated px-1.5 py-0.5 font-jetbrains font-semibold text-ink-secondary">{code}</span>
-                    </td>
-                    <td className="px-3 py-3 font-jetbrains font-semibold text-ink-primary">{p.chi} chỉ</td>
-                    <td className="px-3 py-3 font-jetbrains text-ink-secondary">{formatVND(p.pricePerChi)}</td>
-                    <td className="px-3 py-3 font-jetbrains text-accent">
-                      {val !== null ? formatVND(val) : <span className="text-ink-muted">—</span>}
-                    </td>
-                    <td className="px-3 py-3">
-                      {gain !== null ? (
-                        <div className={`font-jetbrains font-semibold ${gain >= 0 ? 'text-neon-green' : 'text-neon-red'}`}>
-                          <span>{gain >= 0 ? '▲' : '▼'} {formatVND(Math.abs(gain))}</span>
-                          {gainPct !== null && (
-                            <div className="font-normal opacity-70">{gainPct >= 0 ? '+' : ''}{gainPct.toFixed(2)}%</div>
-                          )}
+                  return (
+                    <tr key={p.id} className={`transition-colors ${isActive ? 'bg-accent/5 ring-1 ring-inset ring-accent/20' : 'hover:bg-surface-elevated'}`}>
+                      <td className="px-3 py-3 font-jetbrains text-ink-muted">{formatDate(p.date)}</td>
+                      <td className="px-3 py-3">
+                        <span className="rounded bg-surface-elevated px-1.5 py-0.5 font-jetbrains font-semibold text-ink-secondary">{code}</span>
+                      </td>
+                      <td className="px-3 py-3 font-jetbrains font-semibold text-ink-primary">{p.chi} chỉ</td>
+                      <td className="px-3 py-3 font-jetbrains text-ink-secondary">{formatVND(p.pricePerChi)}</td>
+                      <td className="px-3 py-3 font-jetbrains text-accent">
+                        {val !== null ? formatVND(val) : <span className="text-ink-muted">—</span>}
+                      </td>
+                      <td className="px-3 py-3">
+                        {gain !== null ? (
+                          <div className={`font-jetbrains font-semibold ${gain >= 0 ? 'text-neon-green' : 'text-neon-red'}`}>
+                            <span>{gain >= 0 ? '▲' : '▼'} {formatVND(Math.abs(gain))}</span>
+                            {gainPct !== null && (
+                              <div className="font-normal opacity-70">{gainPct >= 0 ? '+' : ''}{gainPct.toFixed(2)}%</div>
+                            )}
+                          </div>
+                        ) : <span className="text-ink-muted">—</span>}
+                      </td>
+                      <td className="px-3 py-3 text-right">
+                        <div className="flex items-center justify-end gap-2.5">
+                          <button
+                            onClick={() => isActive ? setEditingId(null) : startEdit(p)}
+                            className={`transition ${isActive ? 'text-accent' : 'text-ink-muted hover:text-brand-light'}`}
+                            title={isActive ? 'Đóng' : 'Sửa'}
+                          >
+                            ✎
+                          </button>
+                          <button onClick={() => deletePurchase(p.id)} className="text-ink-muted transition hover:text-neon-red" title="Xóa">✕</button>
                         </div>
-                      ) : <span className="text-ink-muted">—</span>}
-                    </td>
-                    <td className="px-3 py-3 text-right">
-                      <div className="flex items-center justify-end gap-2.5">
-                        <button
-                          onClick={() => isActive ? setEditingId(null) : startEdit(p)}
-                          className={`transition ${isActive ? 'text-accent' : 'text-ink-muted hover:text-brand-light'}`}
-                          title={isActive ? 'Đóng' : 'Sửa'}
-                        >
-                          ✎
-                        </button>
-                        <button onClick={() => deletePurchase(p.id)} className="text-ink-muted transition hover:text-neon-red" title="Xóa">✕</button>
-                      </div>
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 

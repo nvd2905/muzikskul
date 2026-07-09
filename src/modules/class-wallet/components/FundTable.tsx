@@ -104,7 +104,7 @@ function AdjustBalanceForm({ onAdjust }: { onAdjust: (delta: number, name: strin
           className={`flex-1 font-jetbrains ${inputClass}`}
         />
       </div>
-      <div className="flex gap-2">
+      <div className="flex flex-col gap-2 sm:flex-row">
         <input
           type="text"
           value={name}
@@ -122,7 +122,7 @@ function AdjustBalanceForm({ onAdjust }: { onAdjust: (delta: number, name: strin
         <button
           type="submit"
           disabled={!amount || !name.trim() || !reason.trim() || isPending}
-          className="rounded-lg bg-brand px-3 py-1.5 text-xs font-semibold text-ink-primary transition hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-50"
+          className="rounded-lg bg-brand px-3 py-2 text-xs font-semibold text-ink-primary transition hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-50 sm:py-1.5"
         >
           {isPending ? '...' : 'Lưu'}
         </button>
@@ -147,8 +147,8 @@ function BudgetSummaryCard({
   const isComplete = pct >= 100
 
   return (
-    <div className="rounded-xl border border-surface-border bg-surface-card p-6 shadow-card">
-      <div className="mb-4 flex items-start justify-between">
+    <div className="rounded-xl border border-surface-border bg-surface-card p-4 shadow-card sm:p-6">
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-sm font-medium text-ink-muted">Quỹ lớp</p>
           <h2 className="text-2xl font-bold text-ink-primary">{className}</h2>
@@ -231,7 +231,7 @@ function ReportPaymentForm({
   return (
     <form onSubmit={handleSubmit} className="mt-4 space-y-2 border-t border-surface-border pt-4">
       <p className="text-xs font-medium text-ink-muted">Đã chuyển khoản? Báo cho lớp biết</p>
-      <div className="flex gap-2">
+      <div className="flex flex-col gap-2 sm:flex-row">
         <input
           type="text"
           inputMode="numeric"
@@ -248,7 +248,7 @@ function ReportPaymentForm({
           className={`flex-1 ${inputClass}`}
         />
       </div>
-      <div className="flex gap-2">
+      <div className="flex flex-col gap-2 sm:flex-row">
         <input
           type="text"
           value={reason}
@@ -259,7 +259,7 @@ function ReportPaymentForm({
         <button
           type="submit"
           disabled={!amount || !name.trim() || isPending}
-          className="rounded-lg bg-brand px-3 py-1.5 text-xs font-semibold text-ink-primary transition hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-50"
+          className="rounded-lg bg-brand px-3 py-2 text-xs font-semibold text-ink-primary transition hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-50 sm:py-1.5"
         >
           {isPending ? '...' : 'Tôi đã chuyển'}
         </button>
@@ -292,7 +292,7 @@ function MomoCard({
   }
 
   return (
-    <div className="rounded-xl border border-surface-border bg-surface-card p-6 shadow-card">
+    <div className="rounded-xl border border-surface-border bg-surface-card p-4 shadow-card sm:p-6">
       <h3 className="mb-4 text-base font-semibold text-ink-primary">Thu tiền qua Momo</h3>
 
       <div className="flex flex-col items-start gap-6 sm:flex-row">
@@ -348,7 +348,7 @@ function TopDonorsCard({ donors }: { donors: TopDonor[] }) {
   if (donors.length === 0) return null
 
   return (
-    <div className="rounded-xl border border-surface-border bg-surface-card p-6 shadow-card">
+    <div className="rounded-xl border border-surface-border bg-surface-card p-4 shadow-card sm:p-6">
       <h3 className="mb-4 text-base font-semibold text-ink-primary">Top 3 người ủng hộ</h3>
       <ol className="space-y-2.5">
         {donors.map((donor, index) => (
@@ -490,7 +490,7 @@ export default function FundTable({
         />
 
         <div className="rounded-xl border border-surface-border bg-surface-card shadow-card">
-          <div className="border-b border-surface-border px-6 py-4">
+          <div className="border-b border-surface-border px-4 py-4 sm:px-6">
             <h3 className="text-base font-semibold text-ink-primary">Giao dịch gần đây</h3>
             {actionError && <p className="mt-1 text-xs font-medium text-neon-red">{actionError}</p>}
 
@@ -501,7 +501,7 @@ export default function FundTable({
                     key={filter.value}
                     type="button"
                     onClick={() => handleStatusFilterChange(filter.value)}
-                    className={`px-3 py-1.5 text-xs font-semibold transition ${
+                    className={`flex-1 px-3 py-1.5 text-xs font-semibold transition sm:flex-none ${
                       statusFilter === filter.value
                         ? 'bg-brand/10 text-brand-light'
                         : 'text-ink-muted hover:text-ink-primary'
@@ -516,7 +516,7 @@ export default function FundTable({
                 value={search}
                 onChange={e => handleSearchChange(e.target.value)}
                 placeholder="Tìm theo tên người nộp..."
-                className="rounded-lg border border-surface-border bg-surface-elevated px-3 py-1.5 text-xs text-ink-primary placeholder:text-ink-muted focus:border-brand focus:outline-none sm:w-64"
+                className="w-full rounded-lg border border-surface-border bg-surface-elevated px-3 py-1.5 text-xs text-ink-primary placeholder:text-ink-muted focus:border-brand focus:outline-none sm:w-64"
               />
             </div>
           </div>
@@ -525,48 +525,48 @@ export default function FundTable({
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-surface-elevated text-left text-xs font-semibold uppercase tracking-wide text-ink-muted">
-                  <th className="px-6 py-3">#</th>
-                  <th className="px-6 py-3">Người nộp</th>
-                  <th className="px-6 py-3">Lý do</th>
-                  <th className="px-6 py-3">Số tiền</th>
-                  <th className="px-6 py-3">Thời gian</th>
-                  <th className="px-6 py-3">Trạng thái</th>
-                  <th className="px-6 py-3">Hành động</th>
+                  <th className="px-4 py-3 sm:px-6">#</th>
+                  <th className="px-4 py-3 sm:px-6">Người nộp</th>
+                  <th className="px-4 py-3 sm:px-6">Lý do</th>
+                  <th className="px-4 py-3 sm:px-6">Số tiền</th>
+                  <th className="px-4 py-3 sm:px-6">Thời gian</th>
+                  <th className="px-4 py-3 sm:px-6">Trạng thái</th>
+                  <th className="px-4 py-3 sm:px-6">Hành động</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-surface-border">
                 {pagedTransactions.map((tx, index) => (
                   <tr key={tx.id} className="transition-colors hover:bg-surface-elevated">
-                    <td className="px-6 py-4 font-jetbrains text-ink-muted">
+                    <td className="px-4 py-4 font-jetbrains text-ink-muted sm:px-6">
                       {(currentPage - 1) * PAGE_SIZE + index + 1}
                     </td>
-                    <td className="px-6 py-4 font-medium text-ink-primary">{tx.payerName}</td>
-                    <td className="px-6 py-4 text-ink-secondary">{tx.note ?? <span className="text-ink-muted">—</span>}</td>
+                    <td className="px-4 py-4 font-medium text-ink-primary sm:px-6">{tx.payerName}</td>
+                    <td className="px-4 py-4 text-ink-secondary sm:px-6">{tx.note ?? <span className="text-ink-muted">—</span>}</td>
                     <td
-                      className={`px-6 py-4 font-jetbrains font-semibold ${
+                      className={`px-4 py-4 font-jetbrains font-semibold sm:px-6 ${
                         tx.amount < 0 ? 'text-neon-red' : 'text-ink-primary'
                       }`}
                     >
                       {formatVND(tx.amount)}
                     </td>
-                    <td className="px-6 py-4 font-jetbrains text-xs text-ink-muted">{formatDateTime(tx.createdAt)}</td>
-                    <td className="whitespace-nowrap px-6 py-4">
+                    <td className="px-4 py-4 font-jetbrains text-xs text-ink-muted sm:px-6">{formatDateTime(tx.createdAt)}</td>
+                    <td className="whitespace-nowrap px-4 py-4 sm:px-6">
                       <StatusBadge status={tx.status} />
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-4 py-4 sm:px-6">
                       {tx.status === 'pending' && isAdmin && (
                         <div className="flex gap-2">
                           <button
                             onClick={() => handleApprove(tx.id)}
                             disabled={isPending && actingId === tx.id}
-                            className="rounded-lg bg-brand px-3 py-1.5 text-xs font-semibold text-ink-primary transition hover:bg-brand-dark focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2 focus:ring-offset-surface-base disabled:cursor-not-allowed disabled:opacity-50"
+                            className="rounded-lg bg-brand px-3 py-2 text-xs font-semibold text-ink-primary transition hover:bg-brand-dark focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2 focus:ring-offset-surface-base disabled:cursor-not-allowed disabled:opacity-50"
                           >
                             {isPending && actingId === tx.id ? 'Đang duyệt...' : 'Duyệt'}
                           </button>
                           <button
                             onClick={() => handleReject(tx.id)}
                             disabled={isPending && actingId === tx.id}
-                            className="rounded-lg border border-surface-border px-3 py-1.5 text-xs font-semibold text-neon-red transition hover:border-neon-red hover:bg-neon-red/10 focus:outline-none focus:ring-2 focus:ring-neon-red focus:ring-offset-2 focus:ring-offset-surface-base disabled:cursor-not-allowed disabled:opacity-50"
+                            className="rounded-lg border border-surface-border px-3 py-2 text-xs font-semibold text-neon-red transition hover:border-neon-red hover:bg-neon-red/10 focus:outline-none focus:ring-2 focus:ring-neon-red focus:ring-offset-2 focus:ring-offset-surface-base disabled:cursor-not-allowed disabled:opacity-50"
                           >
                             {isPending && actingId === tx.id ? 'Đang xử lý...' : 'Từ chối'}
                           </button>
@@ -577,7 +577,7 @@ export default function FundTable({
                 ))}
                 {pagedTransactions.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="px-6 py-8 text-center text-ink-muted">
+                    <td colSpan={7} className="px-4 py-8 text-center text-ink-muted sm:px-6">
                       Không có giao dịch nào phù hợp.
                     </td>
                   </tr>
@@ -586,18 +586,18 @@ export default function FundTable({
             </table>
           </div>
 
-          <div className="flex items-center justify-between border-t border-surface-border px-6 py-3">
+          <div className="flex flex-col gap-2 border-t border-surface-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6">
             <p className="text-xs text-ink-muted">
               {filteredTransactions.length === 0
                 ? '0 giao dịch'
                 : `${(currentPage - 1) * PAGE_SIZE + 1}–${Math.min(currentPage * PAGE_SIZE, filteredTransactions.length)} / ${filteredTransactions.length} giao dịch`}
             </p>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center justify-between gap-2 sm:justify-start">
               <button
                 type="button"
                 onClick={() => setPage(p => Math.max(p - 1, 1))}
                 disabled={currentPage <= 1}
-                className="rounded-lg border border-surface-border px-3 py-1.5 text-xs font-semibold text-ink-secondary transition hover:border-brand hover:text-brand-light disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded-lg border border-surface-border px-3 py-2 text-xs font-semibold text-ink-secondary transition hover:border-brand hover:text-brand-light disabled:cursor-not-allowed disabled:opacity-50 sm:py-1.5"
               >
                 ‹ Trước
               </button>
@@ -608,7 +608,7 @@ export default function FundTable({
                 type="button"
                 onClick={() => setPage(p => Math.min(p + 1, totalPages))}
                 disabled={currentPage >= totalPages}
-                className="rounded-lg border border-surface-border px-3 py-1.5 text-xs font-semibold text-ink-secondary transition hover:border-brand hover:text-brand-light disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded-lg border border-surface-border px-3 py-2 text-xs font-semibold text-ink-secondary transition hover:border-brand hover:text-brand-light disabled:cursor-not-allowed disabled:opacity-50 sm:py-1.5"
               >
                 Sau ›
               </button>

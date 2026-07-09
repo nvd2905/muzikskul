@@ -3,7 +3,11 @@
 import { useState, useTransition } from 'react'
 import type {
   AccessibleWallet,
+  AnalyticsSummary,
+  BudgetLimit,
   CategoryBreakdown,
+  PaymentAccount,
+  PaymentAccountType,
   PersonalAccount,
   PersonalTransaction,
   SharePermission,
@@ -12,6 +16,10 @@ import type {
   WalletMember,
   WalletSummary,
 } from '../types'
+import Tabs from '@/shared/components/Tabs'
+import AccountsMatrix from './AccountsMatrix'
+import AnalyticsSection from './AnalyticsSection'
+import BudgetProgressBars from './BudgetProgressBars'
 import ShareWalletPanel from './ShareWalletPanel'
 import WalletSwitcher from './WalletSwitcher'
 
@@ -27,6 +35,11 @@ type WalletDashboardProps = {
   members: WalletMember[]
   currentUserId: string
   permission: SharePermission
+  paymentAccounts: PaymentAccount[]
+  budgetLimits: BudgetLimit[]
+  analytics: AnalyticsSummary
+  onCreatePaymentAccount: (name: string, type: PaymentAccountType) => Promise<ActionResult>
+  onSetBudgetLimit: (category: TransactionCategory, limitAmount: number) => Promise<ActionResult>
   onAddTransaction: (
     amount: number,
     type: TransactionType,
@@ -69,7 +82,7 @@ function SummaryGrid({ summary }: { summary: WalletSummary }) {
 
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-      <div className="rounded-xl border border-surface-border bg-surface-card p-6 shadow-card">
+      <div className="rounded-xl border border-surface-border bg-surface-card p-4 shadow-card sm:p-6">
         <p className="text-sm font-medium text-ink-muted">Số dư hiện tại</p>
         <p
           className={`mt-1 font-jetbrains text-3xl font-bold tracking-tight ${
@@ -79,13 +92,13 @@ function SummaryGrid({ summary }: { summary: WalletSummary }) {
           {formatVND(summary.balance)}
         </p>
       </div>
-      <div className="rounded-xl border border-surface-border bg-surface-card p-6 shadow-card">
+      <div className="rounded-xl border border-surface-border bg-surface-card p-4 shadow-card sm:p-6">
         <p className="text-sm font-medium text-ink-muted">Tổng thu</p>
         <p className="mt-1 font-jetbrains text-3xl font-bold tracking-tight text-neon-green">
           {formatVND(summary.totalIncome)}
         </p>
       </div>
-      <div className="rounded-xl border border-surface-border bg-surface-card p-6 shadow-card">
+      <div className="rounded-xl border border-surface-border bg-surface-card p-4 shadow-card sm:p-6">
         <p className="text-sm font-medium text-ink-muted">Tổng chi</p>
         <p className="mt-1 font-jetbrains text-3xl font-bold tracking-tight text-neon-red">
           {formatVND(summary.totalExpense)}
@@ -99,7 +112,7 @@ function CategoryBreakdownCard({ breakdown }: { breakdown: CategoryBreakdown[] }
   if (breakdown.length === 0) return null
 
   return (
-    <div className="rounded-xl border border-surface-border bg-surface-card p-6 shadow-card">
+    <div className="rounded-xl border border-surface-border bg-surface-card p-4 shadow-card sm:p-6">
       <h3 className="mb-4 text-base font-semibold text-ink-primary">Chi tiêu theo danh mục</h3>
       <div className="space-y-3">
         {breakdown.map(item => (
@@ -182,14 +195,14 @@ function QuickAddForm({
     'rounded-lg border border-surface-border bg-surface-elevated px-3 py-2 text-sm text-ink-primary placeholder:text-ink-muted focus:border-brand focus:outline-none'
 
   return (
-    <div className="rounded-xl border border-surface-border bg-surface-card p-6 shadow-card">
+    <div className="rounded-xl border border-surface-border bg-surface-card p-4 shadow-card sm:p-6">
       <h3 className="mb-4 text-base font-semibold text-ink-primary">Thêm giao dịch nhanh</h3>
       <form onSubmit={handleSubmit} className="space-y-3">
-        <div className="flex w-fit overflow-hidden rounded-lg border border-surface-border">
+        <div className="flex overflow-hidden rounded-lg border border-surface-border sm:w-fit">
           <button
             type="button"
             onClick={() => setType('income')}
-            className={`px-4 py-1.5 text-xs font-semibold transition ${
+            className={`flex-1 px-4 py-2 text-xs font-semibold transition sm:flex-none sm:py-1.5 ${
               type === 'income' ? 'bg-neon-green/10 text-neon-green' : 'text-ink-muted hover:text-ink-primary'
             }`}
           >
@@ -198,7 +211,7 @@ function QuickAddForm({
           <button
             type="button"
             onClick={() => setType('expense')}
-            className={`px-4 py-1.5 text-xs font-semibold transition ${
+            className={`flex-1 px-4 py-2 text-xs font-semibold transition sm:flex-none sm:py-1.5 ${
               type === 'expense' ? 'bg-neon-red/10 text-neon-red' : 'text-ink-muted hover:text-ink-primary'
             }`}
           >
@@ -237,7 +250,7 @@ function QuickAddForm({
             + Thêm danh mục mới
           </button>
         ) : (
-          <div className="flex gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row">
             <input
               type="text"
               value={newCategoryName}
@@ -245,25 +258,27 @@ function QuickAddForm({
               placeholder="Tên danh mục mới"
               className={`flex-1 ${inputClass}`}
             />
-            <button
-              type="button"
-              onClick={handleAddCategory}
-              disabled={!newCategoryName.trim() || isAddingCategoryPending}
-              className="rounded-lg bg-brand px-3 py-2 text-xs font-semibold text-ink-primary transition hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {isAddingCategoryPending ? '...' : 'Thêm'}
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setIsAddingCategory(false)
-                setNewCategoryName('')
-                setCategoryError(null)
-              }}
-              className="rounded-lg border border-surface-border px-3 py-2 text-xs font-semibold text-ink-secondary transition hover:border-brand hover:text-brand-light"
-            >
-              Huỷ
-            </button>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={handleAddCategory}
+                disabled={!newCategoryName.trim() || isAddingCategoryPending}
+                className="flex-1 rounded-lg bg-brand px-3 py-2 text-xs font-semibold text-ink-primary transition hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-50 sm:flex-none"
+              >
+                {isAddingCategoryPending ? '...' : 'Thêm'}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsAddingCategory(false)
+                  setNewCategoryName('')
+                  setCategoryError(null)
+                }}
+                className="flex-1 rounded-lg border border-surface-border px-3 py-2 text-xs font-semibold text-ink-secondary transition hover:border-brand hover:text-brand-light sm:flex-none"
+              >
+                Huỷ
+              </button>
+            </div>
           </div>
         )}
         {categoryError && <p className="text-xs font-medium text-neon-red">{categoryError}</p>}
@@ -318,7 +333,7 @@ function WalletNameEditor({
           }}
           aria-label="Đổi tên ví"
           title="Đổi tên ví"
-          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-surface-border text-ink-secondary transition hover:border-brand hover:text-brand-light"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-surface-border text-ink-secondary transition hover:border-brand hover:text-brand-light"
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
@@ -429,12 +444,12 @@ function TransactionRow({
 
   if (isEditing) {
     return (
-      <form onSubmit={handleSave} className="space-y-3 px-6 py-4">
-        <div className="flex w-fit overflow-hidden rounded-lg border border-surface-border">
+      <form onSubmit={handleSave} className="space-y-3 px-4 py-4 sm:px-6">
+        <div className="flex overflow-hidden rounded-lg border border-surface-border sm:w-fit">
           <button
             type="button"
             onClick={() => setType('income')}
-            className={`px-4 py-1.5 text-xs font-semibold transition ${
+            className={`flex-1 px-4 py-2 text-xs font-semibold transition sm:flex-none sm:py-1.5 ${
               type === 'income' ? 'bg-neon-green/10 text-neon-green' : 'text-ink-muted hover:text-ink-primary'
             }`}
           >
@@ -443,7 +458,7 @@ function TransactionRow({
           <button
             type="button"
             onClick={() => setType('expense')}
-            className={`px-4 py-1.5 text-xs font-semibold transition ${
+            className={`flex-1 px-4 py-2 text-xs font-semibold transition sm:flex-none sm:py-1.5 ${
               type === 'expense' ? 'bg-neon-red/10 text-neon-red' : 'text-ink-muted hover:text-ink-primary'
             }`}
           >
@@ -495,7 +510,7 @@ function TransactionRow({
   }
 
   return (
-    <div className="group flex items-center justify-between px-6 py-4 transition-colors hover:bg-surface-elevated">
+    <div className="group flex flex-wrap items-center justify-between gap-3 px-4 py-4 transition-colors hover:bg-surface-elevated sm:px-6">
       <div className="flex items-center gap-3">
         <span
           className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold ${
@@ -518,7 +533,7 @@ function TransactionRow({
           {formatVND(tx.amount)}
         </p>
         {canEdit && (
-          <div className="flex items-center gap-2 opacity-0 transition-opacity group-hover:opacity-100">
+          <div className="flex items-center gap-2 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100">
             <button
               type="button"
               onClick={() => setIsEditing(true)}
@@ -551,6 +566,11 @@ export default function WalletDashboard({
   members,
   currentUserId,
   permission,
+  paymentAccounts,
+  budgetLimits,
+  analytics,
+  onCreatePaymentAccount,
+  onSetBudgetLimit,
   onAddTransaction,
   onAddCategory,
   onUpdateTransaction,
@@ -579,46 +599,80 @@ export default function WalletDashboard({
 
       <SummaryGrid summary={summary} />
 
-      <CategoryBreakdownCard breakdown={categoryBreakdown} />
+      <Tabs
+        tabs={[
+          { id: 'overview', label: 'Tổng quan' },
+          { id: 'budget', label: 'Hạn mức' },
+          { id: 'transactions', label: 'Giao dịch' },
+          { id: 'sharing', label: 'Chia sẻ' },
+        ]}
+      >
+        {activeTabId => (
+          <>
+            {activeTabId === 'overview' && (
+              <div className="space-y-6">
+                <AccountsMatrix accounts={paymentAccounts} canEdit={canEdit} onCreateAccount={onCreatePaymentAccount} />
+                <AnalyticsSection analytics={analytics} />
+                <CategoryBreakdownCard breakdown={categoryBreakdown} />
+              </div>
+            )}
 
-      <ShareWalletPanel
-        members={members}
-        currentUserId={currentUserId}
-        isOwner={isOwner}
-        onShareWallet={onShareWallet}
-        onRevokeShare={onRevokeShare}
-      />
-
-      {canEdit ? (
-        <QuickAddForm categories={categories} onAdd={onAddTransaction} onAddCategory={onAddCategory} />
-      ) : (
-        <div className="rounded-xl border border-surface-border bg-surface-card p-6 text-center shadow-card">
-          <p className="text-sm text-ink-muted">Bạn chỉ có quyền xem ví này.</p>
-        </div>
-      )}
-
-      <div className="rounded-xl border border-surface-border bg-surface-card shadow-card">
-        <div className="border-b border-surface-border px-6 py-4">
-          <h3 className="text-base font-semibold text-ink-primary">Lịch sử giao dịch</h3>
-        </div>
-        {transactions.length === 0 ? (
-          <p className="px-6 py-8 text-center text-sm text-ink-muted">Chưa có giao dịch nào.</p>
-        ) : (
-          <div className="divide-y divide-surface-border">
-            {transactions.map(tx => (
-              <TransactionRow
-                key={tx.id}
-                tx={tx}
-                showCreator={showCreator}
-                canEdit={canEdit}
+            {activeTabId === 'budget' && (
+              <BudgetProgressBars
+                budgetLimits={budgetLimits}
                 categories={categories}
-                onUpdate={onUpdateTransaction}
-                onDelete={onDeleteTransaction}
+                canEdit={canEdit}
+                onSetBudgetLimit={onSetBudgetLimit}
               />
-            ))}
-          </div>
+            )}
+
+            {activeTabId === 'transactions' && (
+              <div className="space-y-6">
+                {canEdit ? (
+                  <QuickAddForm categories={categories} onAdd={onAddTransaction} onAddCategory={onAddCategory} />
+                ) : (
+                  <div className="rounded-xl border border-surface-border bg-surface-card p-4 text-center shadow-card sm:p-6">
+                    <p className="text-sm text-ink-muted">Bạn chỉ có quyền xem ví này.</p>
+                  </div>
+                )}
+
+                <div className="rounded-xl border border-surface-border bg-surface-card shadow-card">
+                  <div className="border-b border-surface-border px-4 py-4 sm:px-6">
+                    <h3 className="text-base font-semibold text-ink-primary">Lịch sử giao dịch</h3>
+                  </div>
+                  {transactions.length === 0 ? (
+                    <p className="px-4 py-8 text-center text-sm text-ink-muted sm:px-6">Chưa có giao dịch nào.</p>
+                  ) : (
+                    <div className="divide-y divide-surface-border">
+                      {transactions.map(tx => (
+                        <TransactionRow
+                          key={tx.id}
+                          tx={tx}
+                          showCreator={showCreator}
+                          canEdit={canEdit}
+                          categories={categories}
+                          onUpdate={onUpdateTransaction}
+                          onDelete={onDeleteTransaction}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {activeTabId === 'sharing' && (
+              <ShareWalletPanel
+                members={members}
+                currentUserId={currentUserId}
+                isOwner={isOwner}
+                onShareWallet={onShareWallet}
+                onRevokeShare={onRevokeShare}
+              />
+            )}
+          </>
         )}
-      </div>
+      </Tabs>
     </div>
   )
 }
