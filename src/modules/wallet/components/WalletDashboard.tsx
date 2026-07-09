@@ -34,6 +34,15 @@ type WalletDashboardProps = {
     description: string,
   ) => Promise<ActionResult>
   onAddCategory: (name: string) => Promise<ActionResult>
+  onUpdateTransaction: (
+    transactionId: string,
+    amount: number,
+    type: TransactionType,
+    category: TransactionCategory,
+    description: string,
+  ) => Promise<ActionResult>
+  onDeleteTransaction: (transactionId: string) => Promise<ActionResult>
+  onRenameWallet: (name: string) => Promise<ActionResult>
   onShareWallet: (email: string, permission: SharePermission) => Promise<ActionResult>
   onRevokeShare: (userId: string) => Promise<ActionResult>
 }
@@ -281,11 +290,212 @@ function QuickAddForm({
   )
 }
 
-function TransactionRow({ tx, showCreator }: { tx: PersonalTransaction; showCreator: boolean }) {
-  const isIncome = tx.type === 'income'
+function WalletNameEditor({
+  name,
+  onRename,
+}: {
+  name: string
+  onRename: WalletDashboardProps['onRenameWallet']
+}) {
+  const [isEditing, setIsEditing] = useState(false)
+  const [value, setValue] = useState(name)
+  const [error, setError] = useState<string | null>(null)
+  const [isPending, startTransition] = useTransition()
+
+  const inputClass =
+    'rounded-lg border border-surface-border bg-surface-elevated px-3 py-1.5 text-sm text-ink-primary placeholder:text-ink-muted focus:border-brand focus:outline-none'
+
+  if (!isEditing) {
+    return (
+      <div className="flex items-center gap-2">
+        <h1 className="font-orbitron text-2xl font-bold text-ink-primary">{name}</h1>
+        <button
+          type="button"
+          onClick={() => {
+            setValue(name)
+            setError(null)
+            setIsEditing(true)
+          }}
+          aria-label="Đổi tên ví"
+          title="Đổi tên ví"
+          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-surface-border text-ink-secondary transition hover:border-brand hover:text-brand-light"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+          </svg>
+        </button>
+      </div>
+    )
+  }
+
+  function handleSubmit(e: React.SyntheticEvent) {
+    e.preventDefault()
+    const trimmed = value.trim()
+    if (!trimmed) {
+      setError('Vui lòng nhập tên ví.')
+      return
+    }
+    startTransition(async () => {
+      const result = await onRename(trimmed)
+      if (result.error) {
+        setError(result.error)
+        return
+      }
+      setError(null)
+      setIsEditing(false)
+    })
+  }
 
   return (
-    <div className="flex items-center justify-between px-6 py-4 transition-colors hover:bg-surface-elevated">
+    <form onSubmit={handleSubmit} className="flex flex-wrap items-center gap-2">
+      <input
+        type="text"
+        value={value}
+        onChange={e => setValue(e.target.value)}
+        autoFocus
+        maxLength={50}
+        className={`font-orbitron font-bold ${inputClass}`}
+      />
+      <button
+        type="submit"
+        disabled={isPending}
+        className="rounded-lg bg-brand px-3 py-1.5 text-xs font-semibold text-ink-primary transition hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        {isPending ? '...' : 'Lưu'}
+      </button>
+      <button
+        type="button"
+        onClick={() => setIsEditing(false)}
+        className="rounded-lg border border-surface-border px-3 py-1.5 text-xs font-semibold text-ink-secondary transition hover:border-brand hover:text-brand-light"
+      >
+        Huỷ
+      </button>
+      {error && <p className="w-full text-xs font-medium text-neon-red">{error}</p>}
+    </form>
+  )
+}
+
+function TransactionRow({
+  tx,
+  showCreator,
+  canEdit,
+  categories,
+  onUpdate,
+  onDelete,
+}: {
+  tx: PersonalTransaction
+  showCreator: boolean
+  canEdit: boolean
+  categories: string[]
+  onUpdate: WalletDashboardProps['onUpdateTransaction']
+  onDelete: WalletDashboardProps['onDeleteTransaction']
+}) {
+  const [isEditing, setIsEditing] = useState(false)
+  const [type, setType] = useState<TransactionType>(tx.type)
+  const [amount, setAmount] = useState(String(tx.amount))
+  const [category, setCategory] = useState<TransactionCategory>(tx.category)
+  const [description, setDescription] = useState(tx.description ?? '')
+  const [error, setError] = useState<string | null>(null)
+  const [isSaving, startSaveTransition] = useTransition()
+  const [isDeleting, startDeleteTransition] = useTransition()
+
+  const isIncome = tx.type === 'income'
+  const inputClass =
+    'rounded-lg border border-surface-border bg-surface-elevated px-3 py-2 text-sm text-ink-primary placeholder:text-ink-muted focus:border-brand focus:outline-none'
+
+  function handleSave(e: React.SyntheticEvent) {
+    e.preventDefault()
+    const value = parseInt(amount, 10)
+    if (!Number.isFinite(value) || value <= 0) {
+      setError('Vui lòng nhập số tiền hợp lệ.')
+      return
+    }
+    startSaveTransition(async () => {
+      const result = await onUpdate(tx.id, value, type, category, description.trim())
+      if (result.error) {
+        setError(result.error)
+        return
+      }
+      setError(null)
+      setIsEditing(false)
+    })
+  }
+
+  function handleDelete() {
+    startDeleteTransition(async () => {
+      await onDelete(tx.id)
+    })
+  }
+
+  if (isEditing) {
+    return (
+      <form onSubmit={handleSave} className="space-y-3 px-6 py-4">
+        <div className="flex w-fit overflow-hidden rounded-lg border border-surface-border">
+          <button
+            type="button"
+            onClick={() => setType('income')}
+            className={`px-4 py-1.5 text-xs font-semibold transition ${
+              type === 'income' ? 'bg-neon-green/10 text-neon-green' : 'text-ink-muted hover:text-ink-primary'
+            }`}
+          >
+            + Thu nhập
+          </button>
+          <button
+            type="button"
+            onClick={() => setType('expense')}
+            className={`px-4 py-1.5 text-xs font-semibold transition ${
+              type === 'expense' ? 'bg-neon-red/10 text-neon-red' : 'text-ink-muted hover:text-ink-primary'
+            }`}
+          >
+            − Chi tiêu
+          </button>
+        </div>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <input
+            type="number"
+            min="1"
+            value={amount}
+            onChange={e => setAmount(e.target.value)}
+            className={`font-jetbrains ${inputClass}`}
+          />
+          <select value={category} onChange={e => setCategory(e.target.value)} className={inputClass}>
+            {categories.map(c => (
+              <option key={c} value={c}>
+                {categoryLabel(c)}
+              </option>
+            ))}
+          </select>
+        </div>
+        <input
+          type="text"
+          value={description}
+          onChange={e => setDescription(e.target.value)}
+          placeholder="Mô tả (tuỳ chọn)"
+          className={`w-full ${inputClass}`}
+        />
+        {error && <p className="text-xs font-medium text-neon-red">{error}</p>}
+        <div className="flex gap-2">
+          <button
+            type="submit"
+            disabled={isSaving}
+            className="rounded-lg bg-brand px-3 py-1.5 text-xs font-semibold text-ink-primary transition hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {isSaving ? 'Đang lưu...' : 'Lưu'}
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsEditing(false)}
+            className="rounded-lg border border-surface-border px-3 py-1.5 text-xs font-semibold text-ink-secondary transition hover:border-brand hover:text-brand-light"
+          >
+            Huỷ
+          </button>
+        </div>
+      </form>
+    )
+  }
+
+  return (
+    <div className="group flex items-center justify-between px-6 py-4 transition-colors hover:bg-surface-elevated">
       <div className="flex items-center gap-3">
         <span
           className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold ${
@@ -302,10 +512,31 @@ function TransactionRow({ tx, showCreator }: { tx: PersonalTransaction; showCrea
           </p>
         </div>
       </div>
-      <p className={`font-jetbrains text-sm font-semibold ${isIncome ? 'text-neon-green' : 'text-neon-red'}`}>
-        {isIncome ? '+' : '−'}
-        {formatVND(tx.amount)}
-      </p>
+      <div className="flex items-center gap-3">
+        <p className={`font-jetbrains text-sm font-semibold ${isIncome ? 'text-neon-green' : 'text-neon-red'}`}>
+          {isIncome ? '+' : '−'}
+          {formatVND(tx.amount)}
+        </p>
+        {canEdit && (
+          <div className="flex items-center gap-2 opacity-0 transition-opacity group-hover:opacity-100">
+            <button
+              type="button"
+              onClick={() => setIsEditing(true)}
+              className="text-xs font-medium text-brand-light hover:text-brand"
+            >
+              Sửa
+            </button>
+            <button
+              type="button"
+              disabled={isDeleting}
+              onClick={handleDelete}
+              className="text-xs font-medium text-neon-red hover:text-neon-red/80 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {isDeleting ? '...' : 'Xoá'}
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
@@ -322,6 +553,9 @@ export default function WalletDashboard({
   permission,
   onAddTransaction,
   onAddCategory,
+  onUpdateTransaction,
+  onDeleteTransaction,
+  onRenameWallet,
   onShareWallet,
   onRevokeShare,
 }: WalletDashboardProps) {
@@ -333,7 +567,11 @@ export default function WalletDashboard({
     <div className="mx-auto max-w-4xl space-y-6 px-4 py-8 sm:px-6">
       <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="font-orbitron text-2xl font-bold text-ink-primary">{selectedAccount.name}</h1>
+          {isOwner ? (
+            <WalletNameEditor name={selectedAccount.name} onRename={onRenameWallet} />
+          ) : (
+            <h1 className="font-orbitron text-2xl font-bold text-ink-primary">{selectedAccount.name}</h1>
+          )}
           <p className="mt-1 text-sm text-ink-secondary">Theo dõi thu chi cá nhân của bạn</p>
         </div>
         <WalletSwitcher wallets={accessibleWallets} selectedAccountId={selectedAccount.id} />
@@ -368,7 +606,15 @@ export default function WalletDashboard({
         ) : (
           <div className="divide-y divide-surface-border">
             {transactions.map(tx => (
-              <TransactionRow key={tx.id} tx={tx} showCreator={showCreator} />
+              <TransactionRow
+                key={tx.id}
+                tx={tx}
+                showCreator={showCreator}
+                canEdit={canEdit}
+                categories={categories}
+                onUpdate={onUpdateTransaction}
+                onDelete={onDeleteTransaction}
+              />
             ))}
           </div>
         )}

@@ -24,24 +24,11 @@ async function getUsernameMap(supabase: Awaited<ReturnType<typeof createClient>>
   return new Map(((data ?? []) as { id: string; username: string | null }[]).map(row => [row.id, row.username]))
 }
 
-export async function ensureDefaultAccount(userId: string): Promise<PersonalAccount> {
+export async function ensureDefaultAccount(): Promise<PersonalAccount> {
   const supabase = await createClient()
-  const { data: existing, error: fetchError } = await supabase
-    .from('personal_accounts')
-    .select('id, name, owner_id')
-    .eq('owner_id', userId)
-    .limit(1)
-    .maybeSingle()
-  if (fetchError) throw fetchError
-  if (existing) return mapAccount(existing)
-
-  const { data: created, error: insertError } = await supabase
-    .from('personal_accounts')
-    .insert({ owner_id: userId })
-    .select('id, name, owner_id')
-    .single()
-  if (insertError) throw insertError
-  return mapAccount(created)
+  const { data, error } = await supabase.rpc('ensure_default_account')
+  if (error) throw error
+  return mapAccount(data)
 }
 
 export async function getAccessibleWallets(userId: string): Promise<AccessibleWallet[]> {
@@ -62,10 +49,18 @@ export async function getAccessibleWallets(userId: string): Promise<AccessibleWa
     permission: 'edit',
   }))
 
-  const sharedWallets: AccessibleWallet[] = (shared ?? [])
-    .filter(row => row.personal_accounts?.[0])
+  type SharedRow = {
+    permission_level: string
+    personal_accounts: { id: string; name: string; owner_id: string } | null
+  }
+  function hasAccount(row: SharedRow): row is SharedRow & { personal_accounts: NonNullable<SharedRow['personal_accounts']> } {
+    return row.personal_accounts !== null
+  }
+
+  const sharedWallets: AccessibleWallet[] = ((shared ?? []) as unknown as SharedRow[])
+    .filter(hasAccount)
     .map(row => ({
-      account: mapAccount(row.personal_accounts[0]),
+      account: mapAccount(row.personal_accounts),
       role: 'partner',
       permission: row.permission_level as SharePermission,
     }))
@@ -285,5 +280,37 @@ export async function addPersonalTransaction(
     category: encryptField(category),
     description: description ? encryptField(description) : null,
   })
+  if (error) throw error
+}
+
+export async function updatePersonalTransaction(
+  transactionId: string,
+  amount: number,
+  type: TransactionType,
+  category: TransactionCategory,
+  description: string | null,
+): Promise<void> {
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from('personal_transactions')
+    .update({
+      amount: encryptField(String(amount)),
+      type,
+      category: encryptField(category),
+      description: description ? encryptField(description) : null,
+    })
+    .eq('id', transactionId)
+  if (error) throw error
+}
+
+export async function deletePersonalTransaction(transactionId: string): Promise<void> {
+  const supabase = await createClient()
+  const { error } = await supabase.from('personal_transactions').delete().eq('id', transactionId)
+  if (error) throw error
+}
+
+export async function renameAccount(accountId: string, name: string): Promise<void> {
+  const supabase = await createClient()
+  const { error } = await supabase.from('personal_accounts').update({ name }).eq('id', accountId)
   if (error) throw error
 }
