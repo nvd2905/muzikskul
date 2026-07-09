@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <linearGradient id="g" x1="4" y1="4" x2="60" y2="60" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#a78bfa" />
+      <stop offset="0.5" stop-color="#7c3aed" />
+      <stop offset="1" stop-color="#06b6d4" />
+    </linearGradient>
+    <radialGradient id="sheen" cx="0.3" cy="0.15" r="0.85">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.35" />
+      <stop offset="0.4" stop-color="#ffffff" stop-opacity="0.05" />
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0" />
+    </radialGradient>
+    <filter id="glow" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="2.5" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+
+  <rect width="64" height="64" rx="14" fill="#09090f" />
+  <rect x="1.5" y="1.5" width="61" height="61" rx="12.5" fill="none" stroke="url(#g)" stroke-width="1.5" />
+  <rect width="64" height="64" rx="14" fill="url(#sheen)" />
+
+  <g filter="url(#glow)">
+    <path
+      d="M14 48V16h6.4l7.6 15.2L35.6 16H42v32h-6.6V27.4l-6.4 12.8h-4L18.6 27.4V48H14Z"
+      fill="url(#g)"
+    />
+  </g>
+
+  <g fill="#ffffff">
+    <path d="M50 8 L51.6 11.6 L55.2 13.2 L51.6 14.8 L50 18.4 L48.4 14.8 L44.8 13.2 L48.4 11.6 Z" opacity="0.9" />
+    <path d="M11 43 L12 45.3 L14.3 46.3 L12 47.3 L11 49.6 L10 47.3 L7.7 46.3 L10 45.3 Z" opacity="0.75" />
+    <circle cx="9" cy="12" r="1.4" opacity="0.8" />
+    <circle cx="55" cy="47" r="1.1" opacity="0.6" />
+  </g>
+</svg>

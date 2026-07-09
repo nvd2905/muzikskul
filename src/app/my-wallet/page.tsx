@@ -13,6 +13,9 @@ import {
   getWalletAccess,
   addUserCategory,
   addPersonalTransaction,
+  updatePersonalTransaction,
+  deletePersonalTransaction,
+  renameAccount,
   inviteUserToWallet,
   revokeWalletShare,
   TRANSACTION_CATEGORIES,
@@ -32,10 +35,8 @@ export default async function MyWalletPage({
 
   if (!user) redirect('/login')
 
-  const [defaultAccount, accessibleWallets] = await Promise.all([
-    ensureDefaultAccount(user.id),
-    getAccessibleWallets(user.id),
-  ])
+  const defaultAccount = await ensureDefaultAccount()
+  const accessibleWallets = await getAccessibleWallets(user.id)
 
   const { wallet: requestedAccountId } = await searchParams
   const selectedWallet =
@@ -126,6 +127,89 @@ export default async function MyWalletPage({
     }
   }
 
+  async function handleUpdateTransaction(
+    accountId: string,
+    transactionId: string,
+    amount: number,
+    type: TransactionType,
+    category: TransactionCategory,
+    description: string,
+  ): Promise<{ error?: string }> {
+    'use server'
+    try {
+      const supabase = await createClient()
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (!user) throw new Error('Unauthorized')
+
+      const wallet = await getWalletAccess(accountId, user.id)
+      if (!wallet || wallet.permission !== 'edit') return { error: 'Bạn không có quyền chỉnh sửa ví này.' }
+
+      if (!Number.isFinite(amount) || amount <= 0) {
+        return { error: 'Số tiền không hợp lệ.' }
+      }
+      if (type !== 'income' && type !== 'expense') {
+        return { error: 'Loại giao dịch không hợp lệ.' }
+      }
+
+      const customCategories = await getUserCategories(accountId)
+      if (![...TRANSACTION_CATEGORIES, ...customCategories].includes(category)) {
+        return { error: 'Danh mục không hợp lệ.' }
+      }
+
+      await updatePersonalTransaction(transactionId, amount, type, category, description.trim() || null)
+      revalidatePath('/my-wallet')
+      return {}
+    } catch {
+      return { error: 'Đã có lỗi xảy ra, vui lòng thử lại.' }
+    }
+  }
+
+  async function handleDeleteTransaction(accountId: string, transactionId: string): Promise<{ error?: string }> {
+    'use server'
+    try {
+      const supabase = await createClient()
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (!user) throw new Error('Unauthorized')
+
+      const wallet = await getWalletAccess(accountId, user.id)
+      if (!wallet || wallet.permission !== 'edit') return { error: 'Bạn không có quyền chỉnh sửa ví này.' }
+
+      await deletePersonalTransaction(transactionId)
+      revalidatePath('/my-wallet')
+      return {}
+    } catch {
+      return { error: 'Đã có lỗi xảy ra, vui lòng thử lại.' }
+    }
+  }
+
+  async function handleRenameWallet(accountId: string, name: string): Promise<{ error?: string }> {
+    'use server'
+    try {
+      const supabase = await createClient()
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (!user) throw new Error('Unauthorized')
+
+      const wallet = await getWalletAccess(accountId, user.id)
+      if (!wallet || wallet.role !== 'owner') return { error: 'Chỉ chủ sở hữu mới có thể đổi tên ví.' }
+
+      const trimmed = name.trim()
+      if (!trimmed) return { error: 'Vui lòng nhập tên ví.' }
+      if (trimmed.length > 50) return { error: 'Tên ví tối đa 50 ký tự.' }
+
+      await renameAccount(accountId, trimmed)
+      revalidatePath('/my-wallet')
+      return {}
+    } catch {
+      return { error: 'Đã có lỗi xảy ra, vui lòng thử lại.' }
+    }
+  }
+
   async function handleShareWallet(
     accountId: string,
     email: string,
@@ -187,6 +271,9 @@ export default async function MyWalletPage({
         permission={permission}
         onAddTransaction={handleAddTransaction.bind(null, selectedAccount.id)}
         onAddCategory={handleAddCategory.bind(null, selectedAccount.id)}
+        onUpdateTransaction={handleUpdateTransaction.bind(null, selectedAccount.id)}
+        onDeleteTransaction={handleDeleteTransaction.bind(null, selectedAccount.id)}
+        onRenameWallet={handleRenameWallet.bind(null, selectedAccount.id)}
         onShareWallet={handleShareWallet.bind(null, selectedAccount.id)}
         onRevokeShare={handleRevokeShare.bind(null, selectedAccount.id)}
       />
