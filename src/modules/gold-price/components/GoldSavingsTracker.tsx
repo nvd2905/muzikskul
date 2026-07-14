@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import MoneyInput, { parseMoneyInput } from '@/shared/components/MoneyInput'
 import type { GoldPrice } from '../services'
 
 const STORAGE_KEY = 'muzikskul:gold-savings'
@@ -25,16 +26,6 @@ function formatVND(n: number) {
 function formatDate(iso: string) {
   const [y, m, d] = iso.split('-')
   return `${d}/${m}/${y}`
-}
-
-function formatPriceInput(raw: string) {
-  const digits = raw.replace(/\D/g, '')
-  if (!digits) return ''
-  return parseInt(digits, 10).toLocaleString('vi-VN')
-}
-
-function parsePriceInput(formatted: string) {
-  return parseInt(formatted.replace(/\D/g, ''), 10) || 0
 }
 
 export default function GoldSavingsTracker({ prices }: { prices: GoldPrice[] }) {
@@ -112,7 +103,7 @@ export default function GoldSavingsTracker({ prices }: { prices: GoldPrice[] }) 
 
   function addPurchase() {
     const chiVal = Math.round(parseFloat(newChi) * 10) / 10
-    const priceVal = parsePriceInput(newPrice)
+    const priceVal = parseMoneyInput(newPrice)
     if (!newDate || !(chiVal > 0) || !(priceVal > 0)) return
     setData(prev => prev ? {
       ...prev,
@@ -143,7 +134,7 @@ export default function GoldSavingsTracker({ prices }: { prices: GoldPrice[] }) 
   function saveEdit() {
     if (!editingId) return
     const chiVal = Math.round(parseFloat(editChi) * 10) / 10
-    const priceVal = parsePriceInput(editPrice)
+    const priceVal = parseMoneyInput(editPrice)
     if (!editDate || !(chiVal > 0) || !(priceVal > 0)) return
     setData(prev => prev ? {
       ...prev,
@@ -330,8 +321,9 @@ export default function GoldSavingsTracker({ prices }: { prices: GoldPrice[] }) 
             </div>
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-medium text-ink-muted">Giá mua / chỉ (VNĐ)</label>
-              <input type="text" inputMode="numeric" value={newPrice}
-                onChange={e => setNewPrice(formatPriceInput(e.target.value))}
+              <MoneyInput
+                value={newPrice}
+                onChange={setNewPrice}
                 placeholder="14.350.000"
                 className={`w-40 font-jetbrains ${inputCls}`}
               />
@@ -385,9 +377,7 @@ export default function GoldSavingsTracker({ prices }: { prices: GoldPrice[] }) 
             </div>
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-medium text-ink-muted">Giá mua / chỉ (VNĐ)</label>
-              <input type="text" inputMode="numeric" value={editPrice}
-                onChange={e => setEditPrice(formatPriceInput(e.target.value))}
-                className={`w-40 font-jetbrains ${inputCls}`} />
+              <MoneyInput value={editPrice} onChange={setEditPrice} className={`w-40 font-jetbrains ${inputCls}`} />
             </div>
             <div className="flex w-full items-end gap-2 sm:w-auto">
               <button onClick={saveEdit} disabled={!editDate || !editChi || !editPrice}

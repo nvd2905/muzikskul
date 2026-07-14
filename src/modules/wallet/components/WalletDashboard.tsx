@@ -16,6 +16,7 @@ import type {
   WalletMember,
   WalletSummary,
 } from '../types'
+import MoneyInput, { parseMoneyInput } from '@/shared/components/MoneyInput'
 import Tabs from '@/shared/components/Tabs'
 import AccountsMatrix from './AccountsMatrix'
 import AnalyticsSection from './AnalyticsSection'
@@ -45,6 +46,7 @@ type WalletDashboardProps = {
     type: TransactionType,
     category: TransactionCategory,
     description: string,
+    paymentAccountId: string | null,
   ) => Promise<ActionResult>
   onAddCategory: (name: string) => Promise<ActionResult>
   onUpdateTransaction: (
@@ -53,6 +55,7 @@ type WalletDashboardProps = {
     type: TransactionType,
     category: TransactionCategory,
     description: string,
+    paymentAccountId: string | null,
   ) => Promise<ActionResult>
   onDeleteTransaction: (transactionId: string) => Promise<ActionResult>
   onRenameWallet: (name: string) => Promise<ActionResult>
@@ -137,10 +140,12 @@ function CategoryBreakdownCard({ breakdown }: { breakdown: CategoryBreakdown[] }
 
 function QuickAddForm({
   categories,
+  paymentAccounts,
   onAdd,
   onAddCategory,
 }: {
   categories: string[]
+  paymentAccounts: PaymentAccount[]
   onAdd: WalletDashboardProps['onAddTransaction']
   onAddCategory: WalletDashboardProps['onAddCategory']
 }) {
@@ -148,6 +153,7 @@ function QuickAddForm({
   const [amount, setAmount] = useState('')
   const [category, setCategory] = useState<TransactionCategory>(categories[0] ?? '')
   const [description, setDescription] = useState('')
+  const [paymentAccountId, setPaymentAccountId] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 
@@ -158,13 +164,13 @@ function QuickAddForm({
 
   function handleSubmit(e: React.SyntheticEvent) {
     e.preventDefault()
-    const value = parseInt(amount, 10)
+    const value = parseMoneyInput(amount)
     if (!Number.isFinite(value) || value <= 0) {
       setError('Vui lòng nhập số tiền hợp lệ.')
       return
     }
     startTransition(async () => {
-      const result = await onAdd(value, type, category, description.trim())
+      const result = await onAdd(value, type, category, description.trim(), paymentAccountId || null)
       if (result.error) {
         setError(result.error)
         return
@@ -220,11 +226,9 @@ function QuickAddForm({
         </div>
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <input
-            type="number"
-            min="1"
+          <MoneyInput
             value={amount}
-            onChange={e => setAmount(e.target.value)}
+            onChange={setAmount}
             placeholder="Số tiền (VNĐ)"
             className={`font-jetbrains ${inputClass}`}
           />
@@ -240,6 +244,15 @@ function QuickAddForm({
             ))}
           </select>
         </div>
+
+        <select value={paymentAccountId} onChange={e => setPaymentAccountId(e.target.value)} className={inputClass}>
+          <option value="">Nguồn tiền (không xác định)</option>
+          {paymentAccounts.map(a => (
+            <option key={a.id} value={a.id}>
+              {a.name}
+            </option>
+          ))}
+        </select>
 
         {!isAddingCategory ? (
           <button
@@ -395,6 +408,7 @@ function TransactionRow({
   showCreator,
   canEdit,
   categories,
+  paymentAccounts,
   onUpdate,
   onDelete,
 }: {
@@ -402,14 +416,16 @@ function TransactionRow({
   showCreator: boolean
   canEdit: boolean
   categories: string[]
+  paymentAccounts: PaymentAccount[]
   onUpdate: WalletDashboardProps['onUpdateTransaction']
   onDelete: WalletDashboardProps['onDeleteTransaction']
 }) {
   const [isEditing, setIsEditing] = useState(false)
   const [type, setType] = useState<TransactionType>(tx.type)
-  const [amount, setAmount] = useState(String(tx.amount))
+  const [amount, setAmount] = useState(tx.amount.toLocaleString('vi-VN'))
   const [category, setCategory] = useState<TransactionCategory>(tx.category)
   const [description, setDescription] = useState(tx.description ?? '')
+  const [paymentAccountId, setPaymentAccountId] = useState(tx.paymentAccountId ?? '')
   const [error, setError] = useState<string | null>(null)
   const [isSaving, startSaveTransition] = useTransition()
   const [isDeleting, startDeleteTransition] = useTransition()
@@ -417,16 +433,17 @@ function TransactionRow({
   const isIncome = tx.type === 'income'
   const inputClass =
     'rounded-lg border border-surface-border bg-surface-elevated px-3 py-2 text-sm text-ink-primary placeholder:text-ink-muted focus:border-brand focus:outline-none'
+  const accountName = paymentAccounts.find(a => a.id === tx.paymentAccountId)?.name
 
   function handleSave(e: React.SyntheticEvent) {
     e.preventDefault()
-    const value = parseInt(amount, 10)
+    const value = parseMoneyInput(amount)
     if (!Number.isFinite(value) || value <= 0) {
       setError('Vui lòng nhập số tiền hợp lệ.')
       return
     }
     startSaveTransition(async () => {
-      const result = await onUpdate(tx.id, value, type, category, description.trim())
+      const result = await onUpdate(tx.id, value, type, category, description.trim(), paymentAccountId || null)
       if (result.error) {
         setError(result.error)
         return
@@ -466,13 +483,7 @@ function TransactionRow({
           </button>
         </div>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <input
-            type="number"
-            min="1"
-            value={amount}
-            onChange={e => setAmount(e.target.value)}
-            className={`font-jetbrains ${inputClass}`}
-          />
+          <MoneyInput value={amount} onChange={setAmount} className={`font-jetbrains ${inputClass}`} />
           <select value={category} onChange={e => setCategory(e.target.value)} className={inputClass}>
             {categories.map(c => (
               <option key={c} value={c}>
@@ -481,6 +492,14 @@ function TransactionRow({
             ))}
           </select>
         </div>
+        <select value={paymentAccountId} onChange={e => setPaymentAccountId(e.target.value)} className={inputClass}>
+          <option value="">Nguồn tiền (không xác định)</option>
+          {paymentAccounts.map(a => (
+            <option key={a.id} value={a.id}>
+              {a.name}
+            </option>
+          ))}
+        </select>
         <input
           type="text"
           value={description}
@@ -523,6 +542,7 @@ function TransactionRow({
           <p className="text-sm font-medium text-ink-primary">{tx.description || categoryLabel(tx.category)}</p>
           <p className="text-xs text-ink-muted">
             {categoryLabel(tx.category)} · {new Date(tx.createdAt).toLocaleDateString('vi-VN')}
+            {accountName && ` · ${accountName}`}
             {showCreator && ` · Tạo bởi ${tx.creatorName ?? 'Không rõ'}`}
           </p>
         </div>
@@ -629,7 +649,12 @@ export default function WalletDashboard({
             {activeTabId === 'transactions' && (
               <div className="space-y-6">
                 {canEdit ? (
-                  <QuickAddForm categories={categories} onAdd={onAddTransaction} onAddCategory={onAddCategory} />
+                  <QuickAddForm
+                    categories={categories}
+                    paymentAccounts={paymentAccounts}
+                    onAdd={onAddTransaction}
+                    onAddCategory={onAddCategory}
+                  />
                 ) : (
                   <div className="rounded-xl border border-surface-border bg-surface-card p-4 text-center shadow-card sm:p-6">
                     <p className="text-sm text-ink-muted">Bạn chỉ có quyền xem ví này.</p>
@@ -651,6 +676,7 @@ export default function WalletDashboard({
                           showCreator={showCreator}
                           canEdit={canEdit}
                           categories={categories}
+                          paymentAccounts={paymentAccounts}
                           onUpdate={onUpdateTransaction}
                           onDelete={onDeleteTransaction}
                         />
