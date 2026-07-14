@@ -9,12 +9,17 @@ Next.js App Router application (TypeScript, Tailwind CSS) — multi-module platf
 ## Commands
 
 ```bash
-npm run dev      # start dev server on http://localhost:3000
-npm run build    # production build (also type-checks)
-npm run lint     # ESLint via next lint
+npm run dev      # custom Node server (tsx watch src/server.ts) — Next + Socket.IO + workers, http://localhost:3000
+npm run dev:next # plain `next dev` WITHOUT the socket server (muzik realtime won't work; use for non-muzik work)
+npm run build    # prisma generate && next build (also type-checks)
+npm run start    # production: cross-env NODE_ENV=production tsx src/server.ts
+npm run lint     # ESLint via next lint (not configured in this repo yet)
+npm run db:migrate  # prisma migrate dev (needs DATABASE_URL + DIRECT_URL — see muzik module note)
 ```
 
 No test runner is configured yet.
+
+> **Note:** `npm run dev`/`start` run a **custom Node server** (`src/server.ts`), not plain `next dev`/`next start`. This is required by the `muzik` module (Socket.IO + background workers). It still serves the whole app, so all other modules work unchanged. See the `muzik` module note below.
 
 ## Architecture
 
@@ -117,7 +122,20 @@ RLS is enabled on `class_funds` and `class_transactions` (`supabase/migrations/0
 - **`auth`** — Discord OAuth2 login/logout via Supabase. `actions.ts` exports `signInWithDiscord`, `signOut`, `getCurrentUser`, and `requireAdmin`. `LoginButton.tsx` is the only client component.
 - **`gold-price`** — domestic gold price dashboard (`GoldPriceDashboard`, `GoldSavingsTracker`) with a 24h SJC price history; viewable without auth, with an inline sign-in CTA.
 - **`wallet`** — personal income/expense tracker (`/my-wallet`): quick-add form, running balance, `amount`/`category`/`description` encrypted at rest via `WALLET_ENCRYPTION_KEY` (see above).
-- **`muzik`** — route scaffolding only (`/muzik` renders a "Coming soon" placeholder); no real features yet.
+- **`muzik`** — real-time collaborative music-listening (ported from the standalone MMMuzik-v2). Create/join/browse rooms, a collaborative YouTube queue, **server-authoritative playback sync**, live chat, presence, and in-app YouTube search. Routes: `/muzik` (hub), `/muzik/rooms` (browse), `/muzik/room/[roomId]` (the room), `/muzik/join/[code]` (invite). REST under `/api/rooms/**` + `/api/session` + `/api/health`; realtime mutations over Socket.IO. See the deviations note below.
+
+## The `muzik` module — intentional deviations from the repo rules
+
+`muzik` was ported from a standalone Socket.IO + Prisma + Redis app. To make it run inside muzikskul it **intentionally breaks four rules** — do not "fix" these; they are load-bearing:
+
+1. **Custom server, not `next dev`/`next start`.** `src/server.ts` (run via `tsx`) boots Next + attaches Socket.IO + starts 3 background workers (`advanceWorker`, `roomReaperWorker`, `presenceFinalizerWorker`) in one process. WebSockets can't live in request-scoped handlers.
+2. **API routes for data** (`src/app/api/rooms/**`, `/api/session`, `/api/health`) — the module's REST layer (create/join/leave + snapshots/history/search). Realtime mutations (queue/playback/chat) go over Socket.IO, not server actions.
+3. **Prisma, not the Supabase JS client**, for the muzik tables — pointed at Supabase's *own* Postgres via `DATABASE_URL` (pooled) + `DIRECT_URL` (direct, for migrations). Schema: `prisma/schema.prisma` (7 tables: users, sessions, rooms, participants, tracks, queue_items, chat_messages). `supabase/migrations/020_muzik_tables_rls.sql` enables **RLS deny-all** on them (Prisma connects as owner and bypasses RLS; this just closes the PostgREST door so the "every table has RLS" rule still holds).
+4. **A second Tailwind design-token set** — the module uses HSL-var tokens (`bg-background`, `bg-surface`, `text-primary`, `text-mmz-accent`, `text-success`, …) scoped to `.muzik-scope` (applied by `src/app/muzik/layout.tsx`) so they never leak onto other pages. MMMuzik's `accent` (magenta) was renamed to **`mmz-accent`** to avoid colliding with muzikskul's cyan `accent`. Everything under `src/modules/muzik/**` is self-contained (module isolation still holds).
+
+**Infra substitutions vs upstream:** Redis was dropped for single-instance operation — `src/modules/muzik/lib/redis.ts` is an in-memory shim (same command surface), broadcasts use a `globalThis`-shared Socket.IO instance (`server/socket/io.ts` + `server/realtime/emitter.ts`) instead of the Redis adapter/emitter, and the pino logger is a `console` shim (`lib/logger.ts`). **Consequence: horizontal scaling needs real Redis re-introduced.** Deploy (`docs/DEPLOYMENT.md`, PM2, GitHub Action) still needs updating for the custom server + `DATABASE_URL`/`DIRECT_URL` secrets — not yet done.
+
+**Guest identity:** the module keeps its own anonymous `mmmuzik_session` cookie (nickname prompt), independent of the Supabase login. `/muzik` is still behind the Supabase auth gate in `middleware.ts`.
 
 ## Deployment
 

@@ -27,3 +27,112 @@
     box-shadow: 0 0 8px theme('colors.accent.glow'), inset 0 0 8px rgba(6, 182, 212, 0.05);
   }
 }
+
+/*
+ * ── muzik module design tokens (ported from MMMuzik-v2) ──────────────────────
+ * Scoped to `.muzik-scope` (applied by src/app/muzik/layout.tsx) so these HSL
+ * variables and base styles NEVER leak onto muzikskul's other pages, which use
+ * the surface-/brand-/ink- token system above. Dark-only here.
+ */
+@layer base {
+  /*
+   * Declared on :root (NOT only .muzik-scope) so Radix/sonner PORTALS — dialogs,
+   * tooltips, toasts render into <body>, OUTSIDE .muzik-scope — still resolve
+   * hsl(var(--…)); otherwise modals render washed-out. These names don't collide
+   * with muzikskul's hex tokens and no other page uses these utility classes, so
+   * defining them globally is additive and safe.
+   */
+  :root {
+    --background: 240 18% 7%;
+    --surface: 240 14% 11%;
+    --surface-2: 240 12% 15%;
+    --foreground: 240 20% 97%;
+    --muted: 240 12% 15%;
+    --muted-foreground: 240 8% 64%;
+    --card: 240 14% 11%;
+    --card-foreground: 240 20% 97%;
+    --popover: 240 12% 13%;
+    --popover-foreground: 240 20% 97%;
+    --border: 240 10% 20%;
+    --input: 240 10% 18%;
+    --primary: 258 90% 66%;
+    --primary-foreground: 0 0% 100%;
+    --accent: 326 84% 64%;
+    --accent-foreground: 0 0% 100%;
+    --success: 142 71% 45%;
+    --success-foreground: 0 0% 100%;
+    --destructive: 0 72% 55%;
+    --destructive-foreground: 0 0% 100%;
+    --ring: 258 90% 66%;
+    --radius: 0.85rem;
+  }
+
+  .muzik-scope {
+    @apply bg-background font-sans text-foreground antialiased;
+    color-scheme: dark;
+  }
+  /* Override muzikskul's global `h1..h6 { font-orbitron text-ink-primary }` inside
+     the module so muzik headings use the intended sans + bright foreground. */
+  .muzik-scope :is(h1, h2, h3, h4, h5, h6) {
+    @apply font-sans text-foreground;
+  }
+  /* Zero-specificity default border color inside the scope; explicit border-<color> utilities still win. */
+  .muzik-scope :where(*) {
+    border-color: hsl(var(--border));
+  }
+  .muzik-scope :focus-visible {
+    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+  }
+
+  /* Portaled Radix/sonner content lives outside .muzik-scope; give it the module's
+     font + default border color so dialogs/tooltips/toasts match. Colors come from
+     the :root vars above. */
+  [data-radix-popper-content-wrapper],
+  [data-sonner-toaster] {
+    @apply font-sans;
+  }
+  [data-radix-popper-content-wrapper] :where(*) {
+    border-color: hsl(var(--border));
+  }
+}
+
+@layer utilities {
+  .bg-aurora {
+    background-image:
+      radial-gradient(60% 60% at 15% 0%, hsl(var(--primary) / 0.18), transparent 60%),
+      radial-gradient(50% 50% at 100% 10%, hsl(var(--accent) / 0.14), transparent 55%),
+      radial-gradient(40% 40% at 80% 100%, hsl(var(--success) / 0.08), transparent 60%);
+  }
+  .text-gradient-brand {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(92deg, hsl(var(--primary)), hsl(var(--accent)));
+  }
+  .surface-panel {
+    @apply rounded-2xl border border-border/70 bg-surface shadow-panel;
+  }
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--border)) transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--border));
+    border-radius: 9999px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .muzik-scope *,
+  .muzik-scope *::before,
+  .muzik-scope *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
