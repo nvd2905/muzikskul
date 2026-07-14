@@ -71,6 +71,7 @@ export default async function MyWalletPage({
     type: TransactionType,
     category: TransactionCategory,
     description: string,
+    paymentAccountId: string | null,
   ): Promise<{ error?: string }> {
     'use server'
     try {
@@ -95,7 +96,14 @@ export default async function MyWalletPage({
         return { error: 'Danh mục không hợp lệ.' }
       }
 
-      await addPersonalTransaction(accountId, user.id, amount, type, category, description.trim() || null)
+      if (paymentAccountId) {
+        const walletPaymentAccounts = await getPaymentAccounts(accountId)
+        if (!walletPaymentAccounts.some(a => a.id === paymentAccountId)) {
+          return { error: 'Tài khoản nguồn không hợp lệ.' }
+        }
+      }
+
+      await addPersonalTransaction(accountId, user.id, amount, type, category, description.trim() || null, paymentAccountId)
       revalidatePath('/my-wallet')
       return {}
     } catch {
@@ -144,6 +152,7 @@ export default async function MyWalletPage({
     type: TransactionType,
     category: TransactionCategory,
     description: string,
+    paymentAccountId: string | null,
   ): Promise<{ error?: string }> {
     'use server'
     try {
@@ -168,7 +177,14 @@ export default async function MyWalletPage({
         return { error: 'Danh mục không hợp lệ.' }
       }
 
-      await updatePersonalTransaction(transactionId, amount, type, category, description.trim() || null)
+      if (paymentAccountId) {
+        const walletPaymentAccounts = await getPaymentAccounts(accountId)
+        if (!walletPaymentAccounts.some(a => a.id === paymentAccountId)) {
+          return { error: 'Tài khoản nguồn không hợp lệ.' }
+        }
+      }
+
+      await updatePersonalTransaction(transactionId, amount, type, category, description.trim() || null, paymentAccountId)
       revalidatePath('/my-wallet')
       return {}
     } catch {

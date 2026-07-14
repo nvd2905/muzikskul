@@ -20,6 +20,7 @@ export type PersonalTransaction = {
   createdAt: string
   createdBy: string | null
   creatorName: string | null
+  paymentAccountId: string | null
 }
 
 export type WalletSummary = {

@@ -169,7 +169,7 @@ export async function getPersonalTransactions(accountId: string): Promise<Person
   const [{ data, error }, usernameById] = await Promise.all([
     supabase
       .from('personal_transactions')
-      .select('id, amount, type, category, description, created_at, user_id')
+      .select('id, amount, type, category, description, created_at, user_id, payment_account_id')
       .eq('account_id', accountId)
       .order('created_at', { ascending: false }),
     getUsernameMap(supabase),
@@ -184,6 +184,7 @@ export async function getPersonalTransactions(accountId: string): Promise<Person
     createdAt: row.created_at,
     createdBy: row.user_id,
     creatorName: row.user_id ? (usernameById.get(row.user_id) ?? null) : null,
+    paymentAccountId: row.payment_account_id,
   }))
 }
 
@@ -275,6 +276,7 @@ export async function addPersonalTransaction(
   type: TransactionType,
   category: TransactionCategory,
   description: string | null,
+  paymentAccountId: string | null,
 ): Promise<void> {
   const supabase = await createClient()
   const { error } = await supabase.from('personal_transactions').insert({
@@ -284,6 +286,7 @@ export async function addPersonalTransaction(
     type,
     category: encryptField(category),
     description: description ? encryptField(description) : null,
+    payment_account_id: paymentAccountId,
   })
   if (error) throw error
 }
@@ -294,6 +297,7 @@ export async function updatePersonalTransaction(
   type: TransactionType,
   category: TransactionCategory,
   description: string | null,
+  paymentAccountId: string | null,
 ): Promise<void> {
   const supabase = await createClient()
   const { error } = await supabase
@@ -303,6 +307,7 @@ export async function updatePersonalTransaction(
       type,
       category: encryptField(category),
       description: description ? encryptField(description) : null,
+      payment_account_id: paymentAccountId,
     })
     .eq('id', transactionId)
   if (error) throw error

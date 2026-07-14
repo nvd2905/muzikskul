@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import MoneyInput, { parseMoneyInput } from '@/shared/components/MoneyInput'
 import type { BudgetLimit, TransactionCategory } from '../types'
 
 type ActionResult = { error?: string }
@@ -45,7 +46,7 @@ function SetLimitForm({
 
   function handleSubmit(e: React.SyntheticEvent) {
     e.preventDefault()
-    const value = parseInt(amount, 10)
+    const value = parseMoneyInput(amount)
     if (!Number.isFinite(value) || value <= 0) {
       setError('Vui lòng nhập hạn mức hợp lệ.')
       return
@@ -70,11 +71,9 @@ function SetLimitForm({
           </option>
         ))}
       </select>
-      <input
-        type="number"
-        min="1"
+      <MoneyInput
         value={amount}
-        onChange={e => setAmount(e.target.value)}
+        onChange={setAmount}
         placeholder="Hạn mức (VNĐ)"
         className={`font-jetbrains ${inputClass}`}
       />

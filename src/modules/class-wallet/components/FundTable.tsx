@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo, useState, useTransition } from 'react'
+import MoneyInput, { parseMoneyInput } from '@/shared/components/MoneyInput'
 import type { FundStatus, Transaction, TopDonor } from '../services'
 
 type ActionResult = { error?: string }
@@ -34,15 +35,6 @@ function formatDateTime(iso: string) {
   }).format(new Date(iso))
 }
 
-function formatWithCommas(digits: string) {
-  if (!digits) return ''
-  return Number(digits).toLocaleString('en-US')
-}
-
-function digitsOnly(value: string) {
-  return value.replace(/\D/g, '')
-}
-
 function AdjustBalanceForm({ onAdjust }: { onAdjust: (delta: number, name: string, reason: string) => Promise<ActionResult> }) {
   const [type, setType] = useState<'add' | 'deduct'>('add')
   const [amount, setAmount] = useState('')
@@ -53,7 +45,7 @@ function AdjustBalanceForm({ onAdjust }: { onAdjust: (delta: number, name: strin
 
   function handleSubmit(e: React.SyntheticEvent) {
     e.preventDefault()
-    const value = parseInt(amount, 10)
+    const value = parseMoneyInput(amount)
     if (!value || value <= 0 || !name.trim() || !reason.trim()) return
     const delta = type === 'add' ? value : -value
     startTransition(async () => {
@@ -95,11 +87,9 @@ function AdjustBalanceForm({ onAdjust }: { onAdjust: (delta: number, name: strin
             − Rút
           </button>
         </div>
-        <input
-          type="text"
-          inputMode="numeric"
-          value={formatWithCommas(amount)}
-          onChange={e => setAmount(digitsOnly(e.target.value))}
+        <MoneyInput
+          value={amount}
+          onChange={setAmount}
           placeholder="Số tiền (VNĐ)"
           className={`flex-1 font-jetbrains ${inputClass}`}
         />
@@ -201,7 +191,7 @@ function ReportPaymentForm({
   defaultPayerName: string
   onReport: (amount: number, payerName: string, reason: string) => Promise<ActionResult>
 }) {
-  const [amount, setAmount] = useState(String(suggestedAmount))
+  const [amount, setAmount] = useState(suggestedAmount > 0 ? suggestedAmount.toLocaleString('vi-VN') : '')
   const [name, setName] = useState(defaultPayerName)
   const [reason, setReason] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -210,7 +200,7 @@ function ReportPaymentForm({
 
   function handleSubmit(e: React.SyntheticEvent) {
     e.preventDefault()
-    const value = parseInt(amount, 10)
+    const value = parseMoneyInput(amount)
     if (!value || value <= 0 || !name.trim()) return
     startTransition(async () => {
       const result = await onReport(value, name.trim(), reason.trim())
@@ -232,11 +222,9 @@ function ReportPaymentForm({
     <form onSubmit={handleSubmit} className="mt-4 space-y-2 border-t border-surface-border pt-4">
       <p className="text-xs font-medium text-ink-muted">Đã chuyển khoản? Báo cho lớp biết</p>
       <div className="flex flex-col gap-2 sm:flex-row">
-        <input
-          type="text"
-          inputMode="numeric"
-          value={formatWithCommas(amount)}
-          onChange={e => setAmount(digitsOnly(e.target.value))}
+        <MoneyInput
+          value={amount}
+          onChange={setAmount}
           placeholder="Số tiền (VNĐ)"
           className={`flex-1 font-jetbrains ${inputClass}`}
         />
