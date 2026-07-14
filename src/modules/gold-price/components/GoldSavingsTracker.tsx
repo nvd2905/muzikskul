@@ -164,7 +164,7 @@ export default function GoldSavingsTracker({ prices }: { prices: GoldPrice[] }) 
 
   const inputCls = 'rounded-lg border border-surface-border bg-surface-elevated px-3 py-1.5 text-sm text-ink-primary placeholder:text-ink-muted focus:border-brand focus:outline-none'
 
-
+ 
   const stats = [
     { label: 'Tổng chỉ tích lũy', value: `${totalChi.toFixed(2)} chỉ`, cls: 'text-ink-primary' },
     { label: 'Tổng vốn bỏ ra', value: formatVND(totalCost), cls: 'text-ink-primary' },
