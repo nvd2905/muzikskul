@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import { useState } from 'react'
 import { signOut } from '@/modules/auth/actions'
 
-export type NavLink = { href: string; label: string }
+export type NavLink = { href: string; label: string; newTab?: boolean }
 
 export type NavUser = {
   id: string
@@ -18,7 +18,7 @@ export const NAV_LINKS: NavLink[] = [
   { href: '/', label: 'Home' },
   { href: '/class-wallet', label: 'Class Wallet' },
   { href: '/gold-price', label: 'Giá vàng' },
-  { href: '/muzik', label: 'Muzik' },
+  { href: '/muzik', label: 'Muzik', newTab: true },
   { href: '/my-wallet', label: 'My Wallet' },
 ]
 
@@ -42,12 +42,14 @@ export default function Navbar({ user, links = NAV_LINKS }: NavbarProps) {
         </Link>
 
         <ul className="hidden items-center gap-0.5 sm:flex">
-          {links.map(({ href, label }) => {
+          {links.map(({ href, label, newTab }) => {
             const active = href === '/' ? pathname === '/' : pathname.startsWith(href)
             return (
               <li key={href}>
                 <Link
                   href={href}
+                  target={newTab ? '_blank' : undefined}
+                  rel={newTab ? 'noopener noreferrer' : undefined}
                   className={`rounded-lg px-3 py-1.5 text-[0.83rem] font-medium transition-colors duration-150 ${
                     active
                       ? 'bg-accent/10 text-accent-light'
@@ -87,12 +89,14 @@ export default function Navbar({ user, links = NAV_LINKS }: NavbarProps) {
       {menuOpen && (
         <div className="border-t border-surface-border bg-surface-card px-4 pb-4 pt-2 shadow-card sm:hidden">
           <ul className="flex flex-col gap-0.5">
-            {links.map(({ href, label }) => {
+            {links.map(({ href, label, newTab }) => {
               const active = href === '/' ? pathname === '/' : pathname.startsWith(href)
               return (
                 <li key={href}>
                   <Link
                     href={href}
+                    target={newTab ? '_blank' : undefined}
+                    rel={newTab ? 'noopener noreferrer' : undefined}
                     onClick={() => setMenuOpen(false)}
                     className={`block rounded-lg px-3 py-2.5 text-sm font-medium transition-colors duration-150 ${
                       active

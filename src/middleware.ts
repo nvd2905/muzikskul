@@ -55,7 +55,10 @@ export const config = {
      * Match all request paths except static assets and Next.js internals.
      * Auth callback must be excluded so Supabase can set the session cookie
      * before the middleware runs any redirect logic.
+     * socket.io + the muzik REST API (api/rooms, api/session, api/health) are
+     * excluded: they carry their own guest-session cookie and must not run a
+     * Supabase getUser() on every realtime poll.
      */
-    '/((?!_next/static|_next/image|favicon.ico|auth/callback|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|auth/callback|socket.io|api/rooms|api/session|api/health|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }
