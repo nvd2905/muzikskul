@@ -34,6 +34,8 @@ jobs:
               const v = process.env.DATABASE_URL || '';
               console.log(v ? v.slice(0, 35) + '...REDACTED...' + v.slice(-25) : 'MISSING');
               console.log('length:', v.length);
+              const yt = process.env.YOUTUBE_API_KEY || '';
+              console.log('YOUTUBE_API_KEY:', yt ? yt.slice(0, 8) + '...REDACTED...' + yt.slice(-4) : 'MISSING', 'length:', yt.length);
             "
             echo "=== pm2 describe muzikskul ==="
             pm2 describe muzikskul || true
