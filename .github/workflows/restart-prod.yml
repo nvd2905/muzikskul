@@ -1,0 +1,23 @@
+name: Restart Production App (one-off)
+
+# Manual-dispatch-only utility: restarts the muzikskul PM2 process without a
+# full redeploy, so already-open DB connections pick up a schema change made
+# out-of-band (e.g. a manually-applied migration).
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  restart:
+    runs-on: ubuntu-latest
+    steps:
+      - name: pm2 restart muzikskul
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          script: |
+            set -euo pipefail
+            pm2 restart muzikskul --update-env
