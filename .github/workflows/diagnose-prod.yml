@@ -37,6 +37,17 @@ jobs:
               const yt = process.env.YOUTUBE_API_KEY || '';
               console.log('YOUTUBE_API_KEY:', yt ? yt.slice(0, 8) + '...REDACTED...' + yt.slice(-4) : 'MISSING', 'length:', yt.length);
             "
+            echo "=== live search.list call from THIS VPS (URL not printed, key never echoed by Google) ==="
+            node -e "
+              const { loadEnvConfig } = require('@next/env');
+              loadEnvConfig(process.cwd(), false);
+              const key = process.env.YOUTUBE_API_KEY;
+              fetch('https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=1&q=test&key=' + encodeURIComponent(key))
+                .then(async r => { console.log('status:', r.status); console.log(await r.text()); })
+                .catch(e => console.log('fetch error:', e.message));
+            "
+            echo "=== outbound IP this VPS uses to reach the internet ==="
+            curl -s https://api.ipify.org || true
             echo "=== pm2 describe muzikskul ==="
             pm2 describe muzikskul || true
             echo "=== pm2 logs (last 80 lines) ==="
