@@ -4,9 +4,12 @@ module.exports = {
       // COEXISTENCE: explicit distinct name so PM2 never collides with the existing app.
       name: 'muzikskul',
       cwd: '/var/www/muzikskul',
-      script: 'node_modules/next/dist/bin/next',
+      // Custom server (Socket.IO + advance/reaper/presence workers) — NOT
+      // `next start`, which never boots WebSockets or the workers the muzik
+      // module needs (see CLAUDE.md's muzik module note).
+      script: 'node_modules/.bin/tsx',
+      args: 'src/server.ts',
       // COEXISTENCE: port 3001 — the existing app is assumed to own 3000. Confirm free before first deploy.
-      args: 'start --port 3001',
       instances: 1,
       exec_mode: 'fork',
       autorestart: true,
