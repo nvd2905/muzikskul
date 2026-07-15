@@ -26,6 +26,15 @@ jobs:
               count=$(grep -c "^${var}=" "$ENV_FILE" || true)
               echo "$var: $count"
             done
+            echo "=== DATABASE_URL as @next/env would load it (redacted middle) ==="
+            cd /var/www/muzikskul
+            node -e "
+              const { loadEnvConfig } = require('@next/env');
+              loadEnvConfig(process.cwd(), false);
+              const v = process.env.DATABASE_URL || '';
+              console.log(v ? v.slice(0, 35) + '...REDACTED...' + v.slice(-25) : 'MISSING');
+              console.log('length:', v.length);
+            "
             echo "=== pm2 describe muzikskul ==="
             pm2 describe muzikskul || true
             echo "=== pm2 logs (last 80 lines) ==="
