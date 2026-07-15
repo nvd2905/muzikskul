@@ -1,0 +1,30 @@
+name: Run Prisma Migrate Deploy (one-off)
+
+# Manual-dispatch-only utility: applies pending Prisma migrations to the
+# production database from the VPS (where DATABASE_URL/DIRECT_URL are
+# already set in .env.production.local), since arbitrary networks often
+# can't reach Supabase's direct-connection host (IPv6-only without the
+# IPv4 add-on). Delete after the muzik schema is confirmed up to date —
+# this is a one-time bootstrap, not a recurring deploy step.
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: prisma migrate deploy on VPS
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          script: |
+            set -euo pipefail
+            cd /var/www/muzikskul
+            set -a
+            source .env.production.local
+            set +a
+            npx prisma migrate deploy
