@@ -1,0 +1,32 @@
+name: Diagnose Production (one-off, read-only)
+
+# Manual-dispatch-only diagnostic: reports whether required muzik env vars are
+# present (counts only, never values), what PM2 is actually running, and
+# recent app logs. Makes no changes.
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Inspect env + PM2 + recent logs
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          script: |
+            set -euo pipefail
+            ENV_FILE=/var/www/muzikskul/.env.production.local
+            echo "=== env var presence (counts only, no values) ==="
+            for var in DATABASE_URL DIRECT_URL NEXT_PUBLIC_SUPABASE_URL NEXT_PUBLIC_SUPABASE_ANON_KEY WALLET_ENCRYPTION_KEY YOUTUBE_API_KEY; do
+              count=$(grep -c "^${var}=" "$ENV_FILE" || true)
+              echo "$var: $count"
+            done
+            echo "=== pm2 describe muzikskul ==="
+            pm2 describe muzikskul || true
+            echo "=== pm2 logs (last 80 lines) ==="
+            pm2 logs muzikskul --lines 80 --nostream || true
